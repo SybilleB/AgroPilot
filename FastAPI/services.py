@@ -32,3 +32,23 @@ async def get_historique_meteo(lat: float, lon: float, date_debut: date, date_fi
         
         donnees = reponse.json()
         return donnees["daily"]
+    
+async def get_previsions_meteo(lat: float, lon: float):
+    """
+    Récupère les prévisions météo pour les 7 prochains jours.
+    Inclut la température du sol (crucial pour le semis).
+    """
+    url = "https://api.open-meteo.com/v1/forecast"
+    
+    parametres = {
+        "latitude": lat,
+        "longitude": lon,
+        "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,soil_temperature_6cm",
+        "timezone": "Europe/Paris",
+        "forecast_days": 7
+    }
+
+    async with httpx.AsyncClient() as client:
+        reponse = await client.get(url, params=parametres)
+        reponse.raise_for_status()
+        return reponse.json()["daily"]
