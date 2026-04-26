@@ -22,7 +22,7 @@ set FASTAPI_DIR=%SCRIPT_DIR%FastAPI
 echo [0/3] Verification des outils...
 
 where node >nul 2>&1
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo  X Node.js n'est pas installe.
     echo    Telecharge-le sur : https://nodejs.org
     pause & exit /b 1
@@ -30,14 +30,14 @@ if %errorlevel% neq 0 (
 for /f "tokens=*" %%v in ('node --version') do echo  OK node %%v
 
 where npm >nul 2>&1
-if %errorlevel% neq 0 (
-    echo  X npm n'est pas installe (normalement inclus avec Node.js).
+if !errorlevel! neq 0 (
+    echo  X npm n'est pas installe - normalement inclus avec Node.js.
     pause & exit /b 1
 )
 echo  OK npm
 
 where python >nul 2>&1
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo  X Python n'est pas installe.
     echo    Telecharge-le sur : https://python.org
     pause & exit /b 1
@@ -75,7 +75,7 @@ if not exist "%REACT_DIR%\.env" (
 echo     Installation des packages npm...
 cd /d "%REACT_DIR%"
 call npm install
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo  X npm install a echoue.
     pause & exit /b 1
 )
@@ -98,7 +98,7 @@ cd /d "%FASTAPI_DIR%"
 if not exist "venv\Scripts\activate.bat" (
     echo     Creation du venv Python...
     python -m venv venv
-    if %errorlevel% neq 0 (
+    if !errorlevel! neq 0 (
         echo  X Impossible de creer le venv.
         pause & exit /b 1
     )
@@ -109,7 +109,7 @@ echo     Activation du venv et installation des packages...
 call venv\Scripts\activate.bat
 python -m pip install --upgrade pip --quiet
 pip install -r requirements.txt --quiet
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo  X pip install a echoue.
     pause & exit /b 1
 )
@@ -120,7 +120,7 @@ echo.
 :: ─────────────────────────────────────────────────────────────
 :: 3. Resume & commandes de lancement
 :: ─────────────────────────────────────────────────────────────
-echo [3/3] Installation terminee !
+echo [3/3] Installation terminee ^^!
 echo.
 echo  =======================================================
 echo   Commandes pour lancer le projet
