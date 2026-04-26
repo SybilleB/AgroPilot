@@ -1,1 +1,3 @@
-export { useColorScheme } from 'react-native';
+// Remplacé par useAuth / useProfile — non utilisé dans AgroPilot
+import { useColorScheme } from 'react-native';
+export { useColorScheme };
