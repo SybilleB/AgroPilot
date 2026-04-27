@@ -25,7 +25,9 @@ async def generer_conseil_agricole(requete: RequeteIA):
     # 2. Récupérer la météo
     try:
         meteo = await get_previsions_meteo(requete.latitude, requete.longitude)
-    except Exception:
+        print("✅ Météo récupérée !") 
+    except Exception as e:
+        print("❌ ERREUR MÉTÉO :", repr(e)) # <--- C'est CETTE ligne qui va nous sauver
         meteo = "Données météo indisponibles."
 
     # 3. Le Prompt (Plus besoin de lui expliquer comment faire un JSON !)
