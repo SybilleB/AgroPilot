@@ -1,28 +1,719 @@
 /**
- * app/(app)/meteo.tsx — Écran Météo
+ * app/(app)/meteo.tsx — Écran Météo Agricole
  *
- * Responsables : Kelyan + Maïlys
- * À implémenter : météo actuelle + prévisions 7 jours via API externe.
- * Service : @/services/meteo.service.ts
+ * Sources :
+ *  - Géocodage    : api-adresse.data.gouv.fr (gratuit, sans clé)
+ *  - Météo        : Open-Meteo              (gratuit, sans clé)
+ *  - Radar        : RainViewer API          (gratuit, sans clé, animé)
+ *  - Satellite    : ESRI World Imagery      (gratuit, sans clé)
+ *  - Carte topo   : OpenTopoMap             (gratuit, sans clé)
+ *
+ * Onglets : Général | Pluie | Gel | ETP | Sol | Vent
  */
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '@/hooks/useAuth';
+import { getFullProfile } from '@/services/profile.service';
+import {
+  DailyForecast,
+  MeteoData,
+  fetchMeteo,
+  geocodeCommune,
+  weatherCodeToEmoji,
+  weatherCodeToLabel,
+} from '@/services/meteo.service';
 import { Colors } from '@/constants/Colors';
 
-export default function MeteoScreen() {
-  const insets = useSafeAreaInsets();
+// ─── Types ────────────────────────────────────────────────────────────────
+
+type Tab       = 'general' | 'pluie' | 'gel' | 'etp' | 'sol' | 'vent';
+type ChartMode = 'pluie' | 'gel' | 'etp';
+
+const TABS: { key: Tab; label: string; icon: string }[] = [
+  { key: 'general', label: 'Général', icon: '☀️' },
+  { key: 'pluie',   label: 'Pluie',   icon: '🌧️' },
+  { key: 'gel',     label: 'Gel',     icon: '❄️' },
+  { key: 'etp',     label: 'ETP',     icon: '💧' },
+  { key: 'sol',     label: 'Sol',     icon: '🌱' },
+  { key: 'vent',    label: 'Vent',    icon: '💨' },
+];
+
+const CHART_MODES: { key: ChartMode; label: string }[] = [
+  { key: 'pluie', label: '🌧️ Pluie' },
+  { key: 'gel',   label: '❄️ Gel'   },
+  { key: 'etp',   label: '💧 ETP'   },
+];
+
+// ─── Composant carte cross-platform ───────────────────────────────────────
+//
+//  • iOS / Android → WebView avec Leaflet + radar RainViewer animé
+//  • Web (Expo web) → iframe Windy embed (react-native-webview non supporté sur web)
+
+function MeteoMap({ lat, lon, commune }: { lat: number; lon: number; commune: string }) {
+  if (Platform.OS === 'web') {
+    const windyUrl =
+      `https://embed.windy.com/embed2.html` +
+      `?lat=${lat}&lon=${lon}&zoom=9&level=surface&overlay=rain` +
+      `&menu=false&message=false&marker=true&calendar=false` +
+      `&pressure=false&type=map&location=coordinates` +
+      `&detail=false&metricWind=km%2Fh&metricTemp=%C2%B0C`;
+    // React.createElement évite les warnings TypeScript sur <iframe>
+    return React.createElement('iframe', {
+      src:   windyUrl,
+      style: { width: '100%', height: '100%', border: 'none' },
+      title: 'Météo Windy',
+      allow: 'fullscreen',
+    });
+  }
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Text style={styles.icon}>🌤️</Text>
-      <Text style={styles.title}>Météo</Text>
-      <Text style={styles.subtitle}>À venir</Text>
+    <WebView
+      source={{ html: buildMapHtml(lat, lon, commune) }}
+      style={mapStyles.webview}
+      originWhitelist={['*']}
+      javaScriptEnabled
+      domStorageEnabled
+      mixedContentMode="always"
+      allowsInlineMediaPlayback
+      scrollEnabled={false}
+      nestedScrollEnabled={false}
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
+    />
+  );
+}
+
+const mapStyles = StyleSheet.create({ webview: { flex: 1 } });
+
+// ─── HTML de la carte interactive ─────────────────────────────────────────
+
+function buildMapHtml(lat: number, lon: number, commune: string): string {
+  // Échappe les caractères dangereux avant injection dans le template HTML/JS
+  const safeCommune = commune
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e');
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{width:100%;height:100%;background:#e8f0e9;}
+    #map{width:100%;height:100%;}
+
+    /* Barre de calques en bas */
+    #layerBar{
+      position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+      z-index:1000;display:flex;gap:6px;
+      background:rgba(255,255,255,0.97);border-radius:28px;
+      padding:6px 10px;box-shadow:0 3px 16px rgba(0,0,0,0.25);
+    }
+    .lbtn{
+      border:none;border-radius:18px;padding:7px 14px;
+      font-size:12px;font-weight:700;cursor:pointer;
+      background:transparent;color:#555;transition:all .2s;
+      white-space:nowrap;
+    }
+    .lbtn.active{background:#2E7D32;color:#fff;}
+
+    /* Badge info en haut */
+    #infoBadge{
+      position:absolute;top:10px;left:10px;z-index:1000;
+      background:rgba(255,255,255,0.95);border-radius:10px;
+      padding:7px 12px;font-size:11px;color:#333;
+      line-height:1.6;max-width:180px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    /* Animation radar */
+    #radarTime{
+      position:absolute;top:10px;right:10px;z-index:1000;
+      background:rgba(46,125,50,0.92);color:#fff;
+      border-radius:8px;padding:5px 10px;font-size:11px;
+      font-weight:700;display:none;
+    }
+
+    /* Masquer attribution Leaflet (trop grande) */
+    .leaflet-control-attribution{font-size:8px;}
+  </style>
+</head>
+<body>
+<div id="map"></div>
+<div id="layerBar">
+  <button class="lbtn active" id="btn-radar"  onclick="setMode('radar')">🌧️ Radar</button>
+  <button class="lbtn"        id="btn-sat"    onclick="setMode('satellite')">🛰️ Satellite</button>
+  <button class="lbtn"        id="btn-topo"   onclick="setMode('topo')">🌾 Terrain</button>
+</div>
+<div id="infoBadge">🌧️ Radar précipitations<br><span style="color:#888;font-size:10px">Animé · temps réel</span></div>
+<div id="radarTime"></div>
+
+<script>
+const LAT="${lat}", LON="${lon}", NAME="${safeCommune}";
+
+/* ── Carte ── */
+const map = L.map('map',{center:[LAT,LON],zoom:9,zoomControl:true});
+
+/* ── Calques de fond ── */
+const OSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OSM'});
+const SAT = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© ESRI'});
+const TOPO= L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© OpenTopoMap'});
+OSM.addTo(map);
+
+/* ── Marqueur exploitation ── */
+const farmIcon = L.divIcon({
+  html:'<div style="background:#2E7D32;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.4)">🚜</div>',
+  className:'',iconSize:[36,36],iconAnchor:[18,18]
+});
+L.marker([LAT,LON],{icon:farmIcon}).addTo(map)
+  .bindPopup('<b>'+NAME+'</b><br><span style="color:#666;font-size:12px">Mon exploitation</span>')
+  .openPopup();
+
+/* ── Radar RainViewer (animé) ── */
+let radarLayers=[], frames=[], frameIdx=0, animTimer=null;
+
+async function loadRadar(){
+  try{
+    const r=await fetch('https://api.rainviewer.com/public/weather-maps.json');
+    const d=await r.json();
+    /* 4 images passées + 2 nowcast */
+    frames=[...d.radar.past.slice(-5),...(d.radar.nowcast||[]).slice(0,3)];
+    preloadFrames();
+  }catch(e){console.warn('radar err',e);}
+}
+
+function preloadFrames(){
+  radarLayers.forEach(l=>map.removeLayer(l));
+  radarLayers=frames.map(f=>
+    L.tileLayer('https://tilecache.rainviewer.com'+f.path+'/512/{z}/{x}/{y}/4/1_1.png',
+      {opacity:0,maxZoom:15,tileSize:512,zoomOffset:-1})
+  );
+  radarLayers.forEach(l=>l.addTo(map));
+  startAnim();
+}
+
+function startAnim(){
+  if(animTimer)clearInterval(animTimer);
+  frameIdx=0;
+  animTimer=setInterval(()=>{
+    radarLayers.forEach((l,i)=>l.setOpacity(i===frameIdx?0.7:0));
+    const ts=new Date(frames[frameIdx].time*1000);
+    const label=ts.getHours().toString().padStart(2,'0')+':'+ts.getMinutes().toString().padStart(2,'0');
+    const isPast=frameIdx<(frames.length-3);
+    document.getElementById('radarTime').textContent=(isPast?'⏪ ':' 🔮 ')+label;
+    frameIdx=(frameIdx+1)%radarLayers.length;
+  },700);
+}
+
+function stopRadar(){
+  if(animTimer){clearInterval(animTimer);animTimer=null;}
+  radarLayers.forEach(l=>map.removeLayer(l));
+  radarLayers=[];frames=[];
+  document.getElementById('radarTime').style.display='none';
+}
+
+/* ── Switch calques ── */
+const infos={
+  radar :'🌧️ Radar précipitations<br><span style="color:#888;font-size:10px">Animé · temps réel</span>',
+  satellite:'🛰️ Imagerie satellite<br><span style="color:#888;font-size:10px">Visualisez vos parcelles</span>',
+  topo  :'🌾 Relief & topographie<br><span style="color:#888;font-size:10px">Drainage · exposition</span>',
+};
+
+function setMode(mode){
+  /* Boutons */
+  document.querySelectorAll('.lbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn-'+mode).classList.add('active');
+  document.getElementById('infoBadge').innerHTML=infos[mode];
+
+  /* Fond */
+  map.removeLayer(OSM);map.removeLayer(SAT);map.removeLayer(TOPO);
+  if(mode==='satellite')SAT.addTo(map);
+  else if(mode==='topo')TOPO.addTo(map);
+  else OSM.addTo(map);
+
+  /* Radar */
+  stopRadar();
+  if(mode==='radar'){
+    document.getElementById('radarTime').style.display='block';
+    loadRadar();
+  }
+}
+
+setMode('radar');
+</script>
+</body>
+</html>`;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+
+const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+function dayShort(d: string) { return JOURS[new Date(d + 'T12:00:00').getDay()]; }
+function totalPrecip(daily: DailyForecast[]) { return daily.reduce((s, d) => s + d.precipitationSum, 0).toFixed(1); }
+function maxPrecipDay(daily: DailyForecast[]) { const m = daily.reduce((a, b) => a.precipitationSum > b.precipitationSum ? a : b); return `${m.precipitationSum} mm (${dayShort(m.date)})`; }
+function coldestNight(daily: DailyForecast[]) { const c = daily.reduce((a, b) => a.tempMin < b.tempMin ? a : b); return `${c.tempMin}°C (${dayShort(c.date)})`; }
+function totalEtp(daily: DailyForecast[]) { return daily.reduce((s, d) => s + d.etp, 0).toFixed(1); }
+function etpLabel(etp: number) { if (etp < 1) return 'Besoins faibles'; if (etp < 3) return 'Besoins modérés'; if (etp < 5) return 'Besoins importants'; return 'Besoins très élevés'; }
+function bilanHydrique(daily: DailyForecast[]) { const b = daily.reduce((s, d) => s + d.precipitationSum - d.etp, 0); return (b >= 0 ? '+' : '') + b.toFixed(1) + ' mm'; }
+function peakEtp(daily: DailyForecast[]) { const p = daily.reduce((a, b) => a.etp > b.etp ? a : b); return `${p.etp} mm (${dayShort(p.date)})`; }
+function soilTrend(temps: number[]) { const h = Math.min(new Date().getHours(), 23); const d = (temps[h] ?? temps[0] ?? 0) - (temps[6] ?? temps[0] ?? 0); if (Math.abs(d) < 0.5) return 'Stable'; return d > 0 ? `+${d.toFixed(1)}°C` : `${d.toFixed(1)}°C`; }
+function windDirLabel(deg: number) { return ['N','NE','E','SE','S','SO','O','NO'][Math.round(deg / 45) % 8]; }
+function humidityLabel(h: number) { if (h < 30) return 'Air très sec'; if (h < 50) return 'Air sec'; if (h < 70) return 'Normal'; if (h < 85) return 'Humide'; return 'Très humide'; }
+function traitementOk(wind: number, gusts: number, precip: number) {
+  if (precip > 0.5) return { ok: false, reason: 'Pluie en cours', icon: '🌧️' };
+  if (gusts > 60)   return { ok: false, reason: 'Rafales > 60 km/h', icon: '💨' };
+  if (wind > 19)    return { ok: false, reason: 'Vent > 19 km/h', icon: '💨' };
+  return { ok: true, reason: 'Conditions favorables', icon: '✅' };
+}
+
+// ─── Graphique barres 7 jours ──────────────────────────────────────────────
+
+function WeekChart({ daily, mode }: { daily: DailyForecast[]; mode: ChartMode }) {
+  const vals = daily.map(d => mode === 'pluie' ? d.precipitationSum : mode === 'gel' ? d.tempMin : d.etp);
+  const absMax = mode === 'gel'
+    ? Math.max(Math.abs(Math.min(...vals)), Math.abs(Math.max(...vals)), 1)
+    : Math.max(...vals, 0.1);
+
+  return (
+    <View style={cs.wrap}>
+      <View style={cs.bars}>
+        {daily.map((d, i) => {
+          const v = vals[i];
+          const h = Math.max((Math.abs(v) / absMax) * 76, 4);
+          const col = mode === 'gel'
+            ? (v < 0 ? '#1565C0' : Colors.warning)
+            : mode === 'pluie' ? (v > 5 ? '#1565C0' : Colors.primaryLight)
+            : (v > 4 ? '#E65100' : Colors.primary);
+          return (
+            <View key={d.date} style={cs.col}>
+              <Text style={[cs.val, v < 0 && { color: '#1565C0' }]}>{v !== 0 ? v : ''}</Text>
+              <View style={cs.track}><View style={[cs.bar, { height: h, backgroundColor: col }]} /></View>
+              <Text style={[cs.day, d.isFrost && { color: '#1565C0', fontWeight: '700' }]}>
+                {i === 0 ? 'Auj.' : dayShort(d.date)}
+              </Text>
+              {d.isFrost && <Text style={{ fontSize: 9 }}>❄️</Text>}
+            </View>
+          );
+        })}
+      </View>
+      <Text style={cs.unit}>en {mode === 'pluie' ? 'mm' : mode === 'gel' ? '°C' : 'mm/j'}</Text>
+    </View>
+  );
+}
+const cs = StyleSheet.create({
+  wrap:  { paddingHorizontal: 4 },
+  bars:  { flexDirection: 'row', alignItems: 'flex-end', height: 104, gap: 5, paddingTop: 20 },
+  col:   { flex: 1, alignItems: 'center', gap: 3 },
+  track: { height: 76, justifyContent: 'flex-end', width: '100%' },
+  bar:   { width: '100%', borderRadius: 4, minHeight: 4 },
+  val:   { fontSize: 9, color: Colors.textMuted, fontWeight: '600', position: 'absolute', top: 0 },
+  day:   { fontSize: 10, color: Colors.textMuted, fontWeight: '500' },
+  unit:  { fontSize: 10, color: Colors.textPlaceholder, textAlign: 'right', marginTop: 4 },
+});
+
+// ─── Sub-composants ───────────────────────────────────────────────────────
+
+function Badge({ icon, value, label }: { icon: string; value: string; label: string }) {
+  return (
+    <View style={s.badge}>
+      <Text style={s.badgeIcon}>{icon}</Text>
+      <Text style={s.badgeVal}>{value}</Text>
+      <Text style={s.badgeLbl}>{label}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  icon:      { fontSize: 48 },
-  title:     { fontSize: 22, fontWeight: '700', color: Colors.primaryDark },
-  subtitle:  { fontSize: 14, color: Colors.textMuted },
+function Card({ icon, title, value, sub, badge }: {
+  icon: string; title: string; value: string; sub?: string;
+  badge?: { label: string; color: string };
+}) {
+  return (
+    <View style={s.card}>
+      <View style={s.cardHead}>
+        <Text style={s.cardIcon}>{icon}</Text>
+        {badge && (
+          <View style={[s.cardBadge, { backgroundColor: badge.color + '22' }]}>
+            <Text style={[s.cardBadgeTxt, { color: badge.color }]}>{badge.label}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={s.cardTitle}>{title}</Text>
+      <Text style={s.cardVal}>{value}</Text>
+      {sub ? <Text style={s.cardSub}>{sub}</Text> : null}
+    </View>
+  );
+}
+
+function FRow({ day, isToday }: { day: DailyForecast; isToday: boolean }) {
+  return (
+    <View style={[s.fRow, day.isFrost && s.fFrost, isToday && s.fToday]}>
+      <Text style={[s.fDay, isToday && s.fDayOn]}>{isToday ? 'Auj.' : dayShort(day.date)}</Text>
+      <Text style={s.fEmoji}>{weatherCodeToEmoji(day.weatherCode)}</Text>
+      <View style={{ flex: 1 }}><Text style={s.fPrecip}>💧 {day.precipitationSum} mm</Text></View>
+      <Text style={s.fEtp}>ETP {day.etp}</Text>
+      <View style={s.fTemps}>
+        {day.isFrost && <Text style={{ fontSize: 11 }}>❄️</Text>}
+        <Text style={s.fMin}>{day.tempMin}°</Text>
+        <Text style={s.fSep}>/</Text>
+        <Text style={s.fMax}>{day.tempMax}°</Text>
+      </View>
+    </View>
+  );
+}
+
+// ─── Écran ────────────────────────────────────────────────────────────────
+
+export default function MeteoScreen() {
+  const insets      = useSafeAreaInsets();
+  const { session } = useAuth();
+
+  const [meteo,      setMeteo]      = useState<MeteoData | null>(null);
+  const [commune,    setCommune]    = useState('');
+  const [coords,     setCoords]     = useState<{ lat: number; lon: number; label: string } | null>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
+  const [tab,        setTab]        = useState<Tab>('general');
+  const [chartMode,  setChartMode]  = useState<ChartMode>('pluie');
+
+  const load = async (isRefresh = false) => {
+    if (!session?.user.id) return;
+    if (!isRefresh) setLoading(true);
+    setError(null);
+    try {
+      const fp   = await getFullProfile(session.user.id);
+      const comm = fp?.exploitation?.commune ?? '';
+      const cp   = fp?.exploitation?.code_postal ?? '';
+      setCommune(comm || 'Mon exploitation');
+      if (!comm) { setError('Commune non renseignée dans le profil.'); return; }
+
+      const c = await geocodeCommune(comm, cp);
+      if (!c) { setError('Impossible de localiser la commune.'); return; }
+      setCoords(c);
+
+      const data = await fetchMeteo(c.lat, c.lon);
+      if (!data) { setError('Impossible de charger les données météo.'); return; }
+      data.coordinates.label = c.label;
+      setMeteo(data);
+    } catch (e: any) {
+      setError(e?.message ?? 'Erreur inattendue.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => { load(); }, [session]);
+
+  if (loading) return (
+    <View style={[s.centered, { paddingTop: insets.top }]}>
+      <ActivityIndicator size="large" color={Colors.primary} />
+      <Text style={s.loadTxt}>Chargement de la météo…</Text>
+    </View>
+  );
+
+  if (error || !meteo) return (
+    <View style={[s.centered, { paddingTop: insets.top }]}>
+      <Text style={{ fontSize: 48 }}>🌧️</Text>
+      <Text style={s.errTitle}>Météo indisponible</Text>
+      <Text style={s.errTxt}>{error ?? 'Données introuvables.'}</Text>
+      <TouchableOpacity style={s.retryBtn} onPress={() => load()}>
+        <Text style={s.retryTxt}>Réessayer</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const { current, daily, hourly } = meteo;
+  const today     = daily[0];
+  const frostDays = daily.filter(d => d.isFrost);
+  const hi        = Math.min(new Date().getHours(), 23);
+  const soilNow   = hourly.soilTemp6cm[hi]  ?? hourly.soilTemp6cm[0]  ?? 0;
+  const soilDeep  = hourly.soilTemp18cm[hi] ?? hourly.soilTemp18cm[0] ?? 0;
+  const dec       = traitementOk(current.windSpeed, current.windGusts, current.precipitation);
+
+  return (
+    <ScrollView
+      style={s.screen}
+      contentContainerStyle={{ paddingBottom: 48 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={Colors.primary} />}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ─── HEADER ──────────────────────────────────────────────── */}
+      <View style={[s.header, { paddingTop: insets.top + 20 }]}>
+        <View style={s.hLeft}>
+          <Text style={{ fontSize: 20 }}>📍</Text>
+          <View>
+            <Text style={s.hName}>{commune}</Text>
+            <Text style={s.hSub}>{coords?.label ?? ''}</Text>
+          </View>
+        </View>
+        <View style={s.hRight}>
+          <Text style={s.tempBig}>{current.temp}°</Text>
+          <Text style={{ fontSize: 24 }}>{weatherCodeToEmoji(current.weatherCode)}</Text>
+        </View>
+      </View>
+
+      {/* ─── STRIP ───────────────────────────────────────────────── */}
+      <View style={s.strip}>
+        <Badge icon="💧" value={`${current.humidity}%`}      label="Humidité" />
+        <Badge icon="💨" value={`${current.windSpeed} km/h`} label="Vent"     />
+        <Badge icon="☀️" value={`UV ${current.uvIndex}`}     label="UV"       />
+        <Badge icon="🌡️" value={`${current.apparent}°`}      label="Ressenti" />
+      </View>
+
+      {/* ─── ALERTE GEL ──────────────────────────────────────────── */}
+      {frostDays.length > 0 && (
+        <View style={s.frostAlert}>
+          <Text style={s.frostAlertTxt}>
+            ❄️ Gel prévu : {frostDays.map(d => dayShort(d.date)).join(', ')} — protégez vos cultures
+          </Text>
+        </View>
+      )}
+
+      {/* ─── CARTE INTERACTIVE ───────────────────────────────────── */}
+      {coords && (
+        <View style={s.mapContainer}>
+          <MeteoMap lat={coords.lat} lon={coords.lon} commune={commune} />
+        </View>
+      )}
+
+      {/* ─── DÉCISION TRAITEMENT ─────────────────────────────────── */}
+      <View style={[s.dec, dec.ok ? s.decOk : s.decNok]}>
+        <View style={s.decLeft}>
+          <Text style={{ fontSize: 28 }}>{dec.icon}</Text>
+          <View>
+            <Text style={[s.decTitle, { color: dec.ok ? Colors.primaryDark : Colors.errorDark }]}>
+              {dec.ok ? 'Traitement possible' : 'Traitement déconseillé'}
+            </Text>
+            <Text style={s.decReason}>{dec.reason}</Text>
+          </View>
+        </View>
+        <View style={s.decRight}>
+          <Text style={s.decWindVal}>{current.windSpeed}</Text>
+          <Text style={s.decWindUnit}>km/h</Text>
+          <Text style={s.decWindLbl}>Vent</Text>
+        </View>
+      </View>
+
+      {/* ─── GRAPHIQUE 7 JOURS ───────────────────────────────────── */}
+      <View style={s.chartCard}>
+        <View style={s.chartHead}>
+          <Text style={s.chartTitle}>Vue 7 jours</Text>
+          <View style={s.chartToggles}>
+            {CHART_MODES.map(m => (
+              <TouchableOpacity
+                key={m.key}
+                style={[s.ctBtn, chartMode === m.key && s.ctBtnOn]}
+                onPress={() => setChartMode(m.key)}
+              >
+                <Text style={[s.ctTxt, chartMode === m.key && s.ctTxtOn]}>{m.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        <WeekChart daily={daily} mode={chartMode} />
+        <View style={s.chartSum}>
+          {chartMode === 'pluie' && <>
+            <Text style={s.csi}>💧 Total : <Text style={s.csv}>{totalPrecip(daily)} mm</Text></Text>
+            <Text style={s.csi}>📍 Max : <Text style={s.csv}>{maxPrecipDay(daily)}</Text></Text>
+          </>}
+          {chartMode === 'gel' && <>
+            <Text style={s.csi}>🌡️ Nuit + froide : <Text style={s.csv}>{coldestNight(daily)}</Text></Text>
+            <Text style={s.csi}>❄️ Jours gel : <Text style={s.csv}>{frostDays.length} / 7</Text></Text>
+          </>}
+          {chartMode === 'etp' && <>
+            <Text style={s.csi}>💧 ETP totale : <Text style={s.csv}>{totalEtp(daily)} mm</Text></Text>
+            <Text style={s.csi}>🌿 Bilan : <Text style={s.csv}>{bilanHydrique(daily)}</Text></Text>
+          </>}
+        </View>
+      </View>
+
+      {/* ─── ONGLETS ─────────────────────────────────────────────── */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}
+        style={s.tabsScroll} contentContainerStyle={s.tabsCont}>
+        {TABS.map(t => (
+          <TouchableOpacity key={t.key}
+            style={[s.tabBtn, tab === t.key && s.tabBtnOn]}
+            onPress={() => setTab(t.key)}>
+            <Text style={s.tabIcon}>{t.icon}</Text>
+            <Text style={[s.tabTxt, tab === t.key && s.tabTxtOn]}>{t.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* ─── CARDS ───────────────────────────────────────────────── */}
+      <View style={s.grid}>
+        {tab === 'general' && (<>
+          <Card icon="🌡️" title="Température"    value={`${current.temp}°C`}            sub={`Ressenti ${current.apparent}°C`} />
+          <Card icon="💧" title="Humidité"        value={`${current.humidity}%`}         sub={humidityLabel(current.humidity)} />
+          <Card icon="🌤️" title="Conditions"      value={weatherCodeToLabel(current.weatherCode)} sub={`UV ${current.uvIndex}`} />
+          <Card icon="🌧️" title="Précip. jour"    value={`${today.precipitationSum} mm`} sub={`${today.precipProbability}% probabilité`} />
+        </>)}
+        {tab === 'pluie' && (<>
+          <Card icon="🌧️" title="Aujourd'hui"     value={`${today.precipitationSum} mm`} sub={`${today.precipProbability}% probabilité`} />
+          <Card icon="📊" title="Cumul 7 jours"   value={`${totalPrecip(daily)} mm`}     sub="Total prévisionnel" />
+          <Card icon="💦" title="Jour le + pluvieux" value={maxPrecipDay(daily)}         sub="Précipitations max" />
+          <Card icon="🌦️" title="Jours de pluie"  value={`${daily.filter(d => d.precipitationSum > 1).length} / 7`} sub="Jours avec > 1 mm" />
+        </>)}
+        {tab === 'gel' && (<>
+          <Card icon="❄️" title="Risque gel"
+            value={frostDays.length > 0 ? `${frostDays.length} jour(s)` : 'Aucun'}
+            sub={frostDays.length > 0 ? frostDays.map(d => dayShort(d.date)).join(', ') : 'Pas de gel prévu'}
+            badge={frostDays.length > 0 ? { label: 'Alerte', color: Colors.error } : { label: 'OK', color: Colors.primary }} />
+          <Card icon="🌡️" title="Nuit la + froide" value={coldestNight(daily)} sub="Cette semaine" />
+          <Card icon="🌡️" title="Min absolu 7j"   value={`${Math.min(...daily.map(d => d.tempMin))}°C`} sub="Température minimale" />
+          <Card icon="🌡️" title="Max absolu 7j"   value={`${Math.max(...daily.map(d => d.tempMax))}°C`} sub="Température maximale" />
+        </>)}
+        {tab === 'etp' && (<>
+          <Card icon="💧" title="ETP aujourd'hui" value={`${today.etp} mm/j`} sub={etpLabel(today.etp)}
+            badge={today.etp > 4 ? { label: 'Irriguer', color: '#1565C0' } : undefined} />
+          <Card icon="📊" title="ETP 7 jours"     value={`${totalEtp(daily)} mm`}    sub="Besoin cumulé" />
+          <Card icon="🌿" title="Bilan hydrique"  value={bilanHydrique(daily)}        sub="Précip. − ETP" />
+          <Card icon="⏱️" title="Pic d'ETP"        value={peakEtp(daily)}             sub="Jour le plus exigeant" />
+        </>)}
+        {tab === 'sol' && (<>
+          <Card icon="🌱" title="Sol superficiel" value={`${Math.round(soilNow)}°C`}  sub="Température à 6 cm"
+            badge={soilNow >= 8 ? { label: 'Semis OK', color: Colors.primary } : { label: 'Trop froid', color: Colors.warning }} />
+          <Card icon="🪱" title="Sol profond"     value={`${Math.round(soilDeep)}°C`} sub="Température à 18 cm" />
+          <Card icon="📈" title="Tendance sol"    value={soilTrend(hourly.soilTemp6cm)} sub="Évolution depuis ce matin" />
+          <Card icon="🌾" title="Conditions"
+            value={soilNow >= 10 ? 'Favorables' : soilNow >= 5 ? 'Correctes' : 'Défavorables'}
+            sub="Développement racinaire" />
+        </>)}
+        {tab === 'vent' && (<>
+          <Card icon="💨" title="Vent moyen"      value={`${current.windSpeed} km/h`}  sub={`Direction : ${windDirLabel(current.windDirection)}`} />
+          <Card icon="🌬️" title="Rafales"          value={`${current.windGusts} km/h`}
+            sub={current.windGusts > 60 ? 'Risque pour traitements' : 'Traitements possibles'}
+            badge={current.windGusts > 60 ? { label: 'Alerte', color: Colors.error } : undefined} />
+          <Card icon="📅" title="Rafales max 7j"  value={`${Math.max(...daily.map(d => d.windGusts))} km/h`} sub="Maximum cette semaine" />
+          <Card icon="🚜" title="Traitement phyto"
+            value={current.windSpeed < 19 ? 'Favorable' : 'Déconseillé'}
+            sub={current.windSpeed < 19 ? '< 19 km/h — dérive faible' : '≥ 19 km/h — risque dérive'}
+            badge={current.windSpeed < 19 ? { label: 'OK', color: Colors.primary } : { label: 'Stop', color: Colors.error }} />
+        </>)}
+      </View>
+
+      {/* ─── PRÉVISIONS 7 JOURS ──────────────────────────────────── */}
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Prévisions détaillées</Text>
+        <View style={{ gap: 6 }}>
+          {daily.map((d, i) => <FRow key={d.date} day={d} isToday={i === 0} />)}
+        </View>
+      </View>
+
+      <Text style={s.footer}>📡 Open-Meteo · RainViewer · ESRI · data.gouv.fr</Text>
+    </ScrollView>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  screen:  { flex: 1, backgroundColor: Colors.background },
+  centered:{ flex: 1, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 },
+  loadTxt: { fontSize: 14, color: Colors.textMuted, marginTop: 8 },
+  errTitle:{ fontSize: 20, fontWeight: '700', color: Colors.primaryDark, textAlign: 'center' },
+  errTxt:  { fontSize: 13, color: Colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  retryBtn:{ marginTop: 8, backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 28 },
+  retryTxt:{ color: '#fff', fontSize: 15, fontWeight: '600' },
+
+  // Header
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 16, backgroundColor: Colors.primaryDark },
+  hLeft:  { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  hName:  { fontSize: 17, fontWeight: '700', color: '#fff' },
+  hSub:   { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 1 },
+  hRight: { alignItems: 'flex-end', gap: 2 },
+  tempBig:{ fontSize: 42, fontWeight: '800', color: '#fff', lineHeight: 48 },
+
+  // Strip
+  strip:    { flexDirection: 'row', backgroundColor: Colors.primary, paddingVertical: 12, paddingHorizontal: 8 },
+  badge:    { flex: 1, alignItems: 'center', gap: 2 },
+  badgeIcon:{ fontSize: 16 },
+  badgeVal: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  badgeLbl: { fontSize: 10, color: 'rgba(255,255,255,0.7)' },
+
+  // Frost
+  frostAlert:   { backgroundColor: '#E3F2FD', borderLeftWidth: 4, borderLeftColor: '#1565C0', marginHorizontal: 16, marginTop: 12, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 },
+  frostAlertTxt:{ fontSize: 13, color: '#0D47A1', lineHeight: 18 },
+
+  // Carte
+  mapContainer: { marginHorizontal: 16, marginTop: 14, borderRadius: 16, overflow: 'hidden', height: 420, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
+
+  // Décision
+  dec:        { marginHorizontal: 16, marginTop: 14, borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  decOk:      { backgroundColor: Colors.successBg, borderLeftWidth: 4, borderLeftColor: Colors.primary },
+  decNok:     { backgroundColor: Colors.errorBg,   borderLeftWidth: 4, borderLeftColor: Colors.error },
+  decLeft:    { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  decTitle:   { fontSize: 15, fontWeight: '700' },
+  decReason:  { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+  decRight:   { alignItems: 'center', minWidth: 52 },
+  decWindVal: { fontSize: 22, fontWeight: '800', color: Colors.primaryDark },
+  decWindUnit:{ fontSize: 11, color: Colors.textMuted, marginTop: -2 },
+  decWindLbl: { fontSize: 10, color: Colors.textMuted },
+
+  // Chart
+  chartCard:    { marginHorizontal: 16, marginTop: 14, backgroundColor: Colors.white, borderRadius: 14, padding: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  chartHead:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  chartTitle:   { fontSize: 14, fontWeight: '700', color: Colors.primaryDark },
+  chartToggles: { flexDirection: 'row', gap: 5 },
+  ctBtn:        { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 12, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border },
+  ctBtnOn:      { backgroundColor: Colors.primaryBg, borderColor: Colors.primary },
+  ctTxt:        { fontSize: 11, color: Colors.textMuted, fontWeight: '500' },
+  ctTxtOn:      { color: Colors.primaryDark, fontWeight: '700' },
+  chartSum:     { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.border },
+  csi:          { fontSize: 11, color: Colors.textMuted },
+  csv:          { fontWeight: '700', color: Colors.primaryDark },
+
+  // Tabs
+  tabsScroll: { marginTop: 16 },
+  tabsCont:   { paddingHorizontal: 12, gap: 8 },
+  tabBtn:     { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border },
+  tabBtnOn:   { backgroundColor: Colors.primaryBg, borderColor: Colors.primary },
+  tabIcon:    { fontSize: 14 },
+  tabTxt:     { fontSize: 13, fontWeight: '500', color: Colors.textMuted },
+  tabTxtOn:   { color: Colors.primaryDark, fontWeight: '700' },
+
+  // Grid cards
+  grid:         { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, gap: 10, marginTop: 14 },
+  card:         { width: '47.5%', backgroundColor: Colors.white, borderRadius: 14, padding: 14, gap: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  cardHead:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  cardIcon:     { fontSize: 22 },
+  cardBadge:    { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
+  cardBadgeTxt: { fontSize: 10, fontWeight: '700' },
+  cardTitle:    { fontSize: 11, color: Colors.textMuted, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.4 },
+  cardVal:      { fontSize: 20, fontWeight: '800', color: Colors.primaryDark, marginTop: 2 },
+  cardSub:      { fontSize: 11, color: Colors.textMuted, lineHeight: 15, marginTop: 2 },
+
+  // Section
+  section:      { marginHorizontal: 16, marginTop: 20 },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.primaryDark, marginBottom: 10 },
+
+  // Forecast
+  fRow:    { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, gap: 10, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 3, elevation: 1 },
+  fFrost:  { backgroundColor: '#E3F2FD', borderLeftWidth: 3, borderLeftColor: '#1565C0' },
+  fToday:  { backgroundColor: Colors.primaryBg, borderLeftWidth: 3, borderLeftColor: Colors.primary },
+  fDay:    { width: 36, fontSize: 13, fontWeight: '600', color: Colors.textMuted },
+  fDayOn:  { color: Colors.primaryDark },
+  fEmoji:  { fontSize: 18 },
+  fPrecip: { fontSize: 11, color: Colors.textMuted },
+  fEtp:    { fontSize: 11, color: Colors.textMuted, width: 52, textAlign: 'right' },
+  fTemps:  { flexDirection: 'row', alignItems: 'center', gap: 1 },
+  fMin:    { fontSize: 13, color: '#1565C0', fontWeight: '600' },
+  fSep:    { fontSize: 13, color: Colors.textMuted },
+  fMax:    { fontSize: 13, color: Colors.error, fontWeight: '600' },
+
+  footer: { textAlign: 'center', fontSize: 11, color: Colors.textPlaceholder, marginTop: 24, paddingHorizontal: 16 },
 });
