@@ -90,13 +90,13 @@ export default function ProfileSetupScreen() {
   const [error, setError]           = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
 
-  // ── Étape 1 : Situation personnelle ─────────────────────────────────────────
+  // ── Étape 1 ──────────────────────────────────────────────────────────────────
   const [phone, setPhone]                       = useState('');
   const [situation, setSituation]               = useState<SituationFamiliale | null>(null);
   const [anneeNaissance, setAnneeNaissance]     = useState('');
   const [nbEnfants, setNbEnfants]               = useState(0);
 
-  // ── Étape 2 : Exploitation ───────────────────────────────────────────────────
+  // ── Étape 2 ──────────────────────────────────────────────────────────────────
   const [nomExploitation, setNomExploitation]   = useState('');
   const [commune, setCommune]                   = useState('');
   const [codePostal, setCodePostal]             = useState('');
@@ -107,13 +107,13 @@ export default function ProfileSetupScreen() {
   const [methode, setMethode]                   = useState<MethodeProduction | null>(null);
   const [certifications, setCertifications]     = useState<Certification[]>([]);
 
-  // ── Étape 3 : Assolement ────────────────────────────────────────────────────
+  // ── Étape 3 ──────────────────────────────────────────────────────────────────
   const [selectedCultures, setSelectedCultures] = useState<TypeCulture[]>([]);
   const [surfacesCultures, setSurfacesCultures] = useState<Record<TypeCulture, string>>({} as any);
 
-  // ── Historique des cultures ──────────────────────────────────────────────────
+  // ── Historique ────────────────────────────────────────────────────────────────
   type HistEntry = { annee: string; type_culture: TypeCulture; surface_ha: string };
-  const [historique, setHistorique] = useState<HistEntry[]>([]);
+  const [historique, setHistorique]         = useState<HistEntry[]>([]);
   const [newHistAnnee, setNewHistAnnee]     = useState('');
   const [newHistCulture, setNewHistCulture] = useState<TypeCulture | null>(null);
   const [newHistSurface, setNewHistSurface] = useState('');
@@ -125,7 +125,7 @@ export default function ProfileSetupScreen() {
     return () => { mountedRef.current = false; };
   }, []);
 
-  // ── Chargement des données existantes (mode édition) ────────────────────────
+  // ── Chargement données existantes ─────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -154,30 +154,27 @@ export default function ProfileSetupScreen() {
       if (c.length > 0) {
         setSelectedCultures(c.map(x => x.type_culture));
         const surfaces: Record<string, string> = {};
-        c.forEach(x => {
-          if (x.surface_ha) surfaces[x.type_culture] = String(x.surface_ha);
-        });
+        c.forEach(x => { if (x.surface_ha) surfaces[x.type_culture] = String(x.surface_ha); });
         setSurfacesCultures(surfaces as any);
       }
 
       if (existing.historique.length > 0) {
         setHistorique(existing.historique.map(h => ({
-          annee:       String(h.annee),
+          annee:        String(h.annee),
           type_culture: h.type_culture,
-          surface_ha:  h.surface_ha != null ? String(h.surface_ha) : '',
+          surface_ha:   h.surface_ha != null ? String(h.surface_ha) : '',
         })));
       }
     })();
   }, [user]);
 
-  // ── Sauvegarde finale ────────────────────────────────────────────────────────
+  // ── Sauvegarde ────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!user) return;
     setError('');
     setLoading(true);
 
     try {
-      // Étape 1
       await saveProfileStep1(user.id, {
         phone:               phone || undefined,
         situation_familiale: situation ?? undefined,
@@ -185,26 +182,23 @@ export default function ProfileSetupScreen() {
         nb_enfants:          nbEnfants,
       });
 
-      // Étape 2
       const exploitationId = await saveExploitation(user.id, {
         nom_exploitation:   nomExploitation  || undefined,
         commune:            commune          || undefined,
         code_postal:        codePostal       || undefined,
         departement:        departement      || undefined,
         region:             region           || undefined,
-        surface_ha:         surfaceHa        ? parseFloat(surfaceHa)  : undefined,
+        surface_ha:         surfaceHa        ? parseFloat(surfaceHa) : undefined,
         type_exploitation:  typeExploitation ?? undefined,
         methode_production: methode          ?? undefined,
         certifications:     certifications.length ? certifications : undefined,
       });
 
-      // Étape 3 — assolement
       await saveCultures(exploitationId, selectedCultures.map(tc => ({
         type_culture: tc,
         surface_ha:   surfacesCultures[tc] ? parseFloat(surfacesCultures[tc]) : undefined,
       })));
 
-      // Historique
       await saveHistorique(exploitationId, historique.map(h => ({
         annee:        parseInt(h.annee, 10),
         type_culture: h.type_culture,
@@ -219,33 +213,60 @@ export default function ProfileSetupScreen() {
     }
   };
 
-  // ── Bilan surface assolement ─────────────────────────────────────────────────
+  // ── Bilan surface ─────────────────────────────────────────────────────────────
   const totalCultures     = selectedCultures.reduce((s, tc) => s + (parseFloat(surfacesCultures[tc] ?? '0') || 0), 0);
   const totalExploitation = parseFloat(surfaceHa) || 0;
   const surfaceOk         = totalExploitation > 0 && Math.abs(totalCultures - totalExploitation) < 0.1;
 
+  const STEP_LABELS = ['Situation', 'Exploitation', 'Assolement'];
+
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView style={styles.root} contentContainerStyle={[styles.container, { paddingTop: insets.top + 16 }]} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        style={s.root}
+        contentContainerStyle={[s.container, { paddingTop: 0, paddingBottom: 48 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
 
-        {/* En-tête + barre de progression */}
-        <View style={styles.header}>
-          <Text style={styles.title}>{isEditMode ? 'Modifier mon profil' : 'Configurer mon exploitation'}</Text>
-          <Text style={styles.subtitle}>Étape {step} sur 3</Text>
-          <View style={styles.progressBar}>
-            {[1, 2, 3].map(s => (
-              <View key={s} style={[styles.progressStep, s <= step && styles.progressStepActive]} />
+        {/* ─── HEADER ─────────────────────────────────────────────────────── */}
+        <View style={[s.header, { paddingTop: insets.top + 28 }]}>
+          <Text style={s.headerTitle}>
+            {isEditMode ? 'Modifier mon profil' : 'Configurer mon exploitation'}
+          </Text>
+          <Text style={s.headerSub}>
+            {isEditMode ? 'Mettez vos informations à jour' : 'Ces informations permettent à AgroPilot de personnaliser vos résultats'}
+          </Text>
+
+          {/* Barre de progression */}
+          <View style={s.progressRow}>
+            {[1, 2, 3].map(n => (
+              <View key={n} style={s.progressStep}>
+                <View style={[s.progressDot, n <= step && s.progressDotActive, n < step && s.progressDotDone]}>
+                  {n < step
+                    ? <Text style={s.progressDotCheck}>✓</Text>
+                    : <Text style={[s.progressDotNum, n <= step && s.progressDotNumActive]}>{n}</Text>
+                  }
+                </View>
+                <Text style={[s.progressLabel, n <= step && s.progressLabelActive]}>{STEP_LABELS[n - 1]}</Text>
+                {n < 3 && <View style={[s.progressLine, n < step && s.progressLineActive]} />}
+              </View>
             ))}
           </View>
         </View>
 
-        {error ? <View style={styles.errorBox}><Text style={styles.errorText}>⚠️ {error}</Text></View> : null}
+        {/* ─── ERREUR ─────────────────────────────────────────────────────── */}
+        {error ? (
+          <View style={s.errorBox}>
+            <Text style={s.errorText}>{error}</Text>
+          </View>
+        ) : null}
 
-        {/* ── ÉTAPE 1 : Situation personnelle ────────────────────────────────── */}
+        {/* ─── ÉTAPE 1 : Situation personnelle ────────────────────────────── */}
         {step === 1 && (
-          <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Situation personnelle</Text>
+          <View style={s.stepCard}>
+            <Text style={s.stepTitle}>Situation personnelle</Text>
 
             <Input
               label="Téléphone (optionnel)"
@@ -255,7 +276,7 @@ export default function ProfileSetupScreen() {
               keyboardType="phone-pad"
             />
 
-            <Text style={styles.fieldLabel}>Situation familiale</Text>
+            <Text style={s.fieldLabel}>Situation familiale</Text>
             <PillSelect
               options={SITUATIONS}
               value={situation}
@@ -269,28 +290,28 @@ export default function ProfileSetupScreen() {
               onChangeText={setAnneeNaissance}
               keyboardType="numeric"
               maxLength={4}
-              style={styles.inputSm}
+              style={s.inputSm}
             />
 
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Nombre d'enfants à charge</Text>
-              <View style={styles.stepper}>
-                <TouchableOpacity style={styles.stepperBtn} onPress={() => setNbEnfants(Math.max(0, nbEnfants - 1))}>
-                  <Text style={styles.stepperBtnText}>−</Text>
+            <View style={s.fieldGroup}>
+              <Text style={s.fieldLabel}>Nombre d'enfants à charge</Text>
+              <View style={s.stepper}>
+                <TouchableOpacity style={s.stepperBtn} onPress={() => setNbEnfants(Math.max(0, nbEnfants - 1))}>
+                  <Text style={s.stepperBtnText}>−</Text>
                 </TouchableOpacity>
-                <Text style={styles.stepperValue}>{nbEnfants}</Text>
-                <TouchableOpacity style={styles.stepperBtn} onPress={() => setNbEnfants(nbEnfants + 1)}>
-                  <Text style={styles.stepperBtnText}>+</Text>
+                <Text style={s.stepperValue}>{nbEnfants}</Text>
+                <TouchableOpacity style={s.stepperBtn} onPress={() => setNbEnfants(nbEnfants + 1)}>
+                  <Text style={s.stepperBtnText}>+</Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
         )}
 
-        {/* ── ÉTAPE 2 : L'exploitation ───────────────────────────────────────── */}
+        {/* ─── ÉTAPE 2 : Exploitation ─────────────────────────────────────── */}
         {step === 2 && (
-          <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Votre exploitation</Text>
+          <View style={s.stepCard}>
+            <Text style={s.stepTitle}>Votre exploitation</Text>
 
             <Input
               label="Nom de l'exploitation (optionnel)"
@@ -299,20 +320,20 @@ export default function ProfileSetupScreen() {
               onChangeText={setNomExploitation}
             />
 
-            <View style={styles.row}>
-              <View style={styles.flex3}>
+            <View style={s.row}>
+              <View style={s.flex3}>
                 <Input label="Commune" placeholder="Poitiers" value={commune} onChangeText={setCommune} />
               </View>
-              <View style={styles.flex2}>
+              <View style={s.flex2}>
                 <Input label="Code postal" placeholder="86000" value={codePostal} onChangeText={setCodePostal} keyboardType="numeric" maxLength={5} />
               </View>
             </View>
 
-            <View style={styles.row}>
-              <View style={styles.flex1}>
+            <View style={s.row}>
+              <View style={s.flex1}>
                 <Input label="Département" placeholder="Vienne" value={departement} onChangeText={setDepartement} />
               </View>
-              <View style={styles.flex1}>
+              <View style={s.flex1}>
                 <Input label="Région" placeholder="N.-Aquitaine" value={region} onChangeText={setRegion} />
               </View>
             </View>
@@ -323,31 +344,31 @@ export default function ProfileSetupScreen() {
               value={surfaceHa}
               onChangeText={setSurfaceHa}
               keyboardType="decimal-pad"
-              style={styles.inputSm}
+              style={s.inputSm}
             />
 
-            <Text style={styles.fieldLabel}>Type d'exploitation</Text>
+            <Text style={s.fieldLabel}>Type d'exploitation</Text>
             <PillSelect options={TYPES_EXPLOITATION} value={typeExploitation} onChange={v => setTypeExploitation(v as TypeExploitation)} />
 
-            <View style={styles.fieldSpacer} />
-            <Text style={styles.fieldLabel}>Méthode de production</Text>
+            <View style={s.fieldSpacer} />
+            <Text style={s.fieldLabel}>Méthode de production</Text>
             <PillSelect options={METHODES} value={methode} onChange={v => setMethode(v as MethodeProduction)} />
 
-            <View style={styles.fieldSpacer} />
-            <Text style={styles.fieldLabel}>Certifications (plusieurs possibles)</Text>
+            <View style={s.fieldSpacer} />
+            <Text style={s.fieldLabel}>Certifications (plusieurs possibles)</Text>
             <PillSelect options={CERTIFICATIONS} value={certifications} onChange={v => setCertifications(v as Certification[])} multiSelect />
           </View>
         )}
 
-        {/* ── ÉTAPE 3 : Assolement + Historique ────────────────────────────── */}
+        {/* ─── ÉTAPE 3 : Assolement ───────────────────────────────────────── */}
         {step === 3 && (
-          <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Assolement</Text>
-            <Text style={styles.stepDesc}>
+          <View style={s.stepCard}>
+            <Text style={s.stepTitle}>Assolement</Text>
+            <Text style={s.stepDesc}>
               Sélectionnez vos cultures actuelles et renseignez la surface par culture.
             </Text>
 
-            <Text style={styles.fieldLabel}>Cultures présentes sur l'exploitation</Text>
+            <Text style={s.fieldLabel}>Cultures présentes sur l'exploitation</Text>
             <PillSelect
               options={CULTURES}
               value={selectedCultures}
@@ -356,21 +377,19 @@ export default function ProfileSetupScreen() {
             />
 
             {selectedCultures.length > 0 && (
-              <View style={styles.culturesDetail}>
-
-                {/* En-têtes colonnes */}
-                <View style={styles.cultureHeader}>
-                  <Text style={[styles.cultureCol, styles.cultureColLabel]}>Culture</Text>
-                  <Text style={styles.cultureCol}>Surface (ha)</Text>
+              <View style={s.culturesDetail}>
+                <View style={s.cultureHeader}>
+                  <Text style={[s.cultureCol, s.cultureColLabel]}>Culture</Text>
+                  <Text style={s.cultureCol}>Surface (ha)</Text>
                 </View>
 
                 {selectedCultures.map(tc => {
                   const label = CULTURES.find(c => c.value === tc)?.label ?? tc;
                   return (
-                    <View key={tc} style={styles.cultureRow}>
-                      <Text style={[styles.cultureCol, styles.cultureColLabel]}>{label}</Text>
+                    <View key={tc} style={s.cultureRow}>
+                      <Text style={[s.cultureCol, s.cultureColLabel]}>{label}</Text>
                       <TextInput
-                        style={[styles.cultureCol, styles.cultureInput]}
+                        style={[s.cultureCol, s.cultureInput]}
                         placeholder="—"
                         keyboardType="decimal-pad"
                         value={surfacesCultures[tc] ?? ''}
@@ -380,87 +399,57 @@ export default function ProfileSetupScreen() {
                   );
                 })}
 
-                {/* Bilan surface */}
-                <View style={[styles.surfaceBilan, surfaceOk && styles.surfaceBilanOk]}>
-                  <Text style={[styles.surfaceBilanText, surfaceOk && styles.surfaceBilanTextOk]}>
-                    {surfaceOk ? '✅' : '📊'} Total assolement : {totalCultures.toFixed(1)} ha
+                <View style={[s.surfaceBilan, surfaceOk && s.surfaceBilanOk]}>
+                  <Text style={[s.surfaceBilanText, surfaceOk && s.surfaceBilanTextOk]}>
+                    {surfaceOk ? '✓' : '~'} Total assolement : {totalCultures.toFixed(1)} ha
                     {totalExploitation > 0 ? ` / ${totalExploitation} ha` : ''}
                   </Text>
                 </View>
-
               </View>
             )}
 
-            {/* ── Historique des cultures ─────────────────────────────────────── */}
-            <View style={styles.histSection}>
-              <Text style={styles.histTitle}>📋 Historique des cultures</Text>
-              <Text style={styles.histDesc}>
+            {/* ── Historique ─────────────────────────────────────────────── */}
+            <View style={s.histSection}>
+              <Text style={s.histTitle}>Historique des cultures</Text>
+              <Text style={s.histDesc}>
                 Ajoutez vos campagnes passées — l'IA les utilisera pour affiner ses prévisions de rendement et de prix.
               </Text>
 
-              {/* Formulaire d'ajout */}
-              <View style={styles.histForm}>
-                <View style={styles.histFormRow}>
-                  <View style={styles.histFormAnnee}>
-                    <Input
-                      label="Année"
-                      placeholder="2023"
-                      value={newHistAnnee}
-                      onChangeText={setNewHistAnnee}
-                      keyboardType="numeric"
-                      maxLength={4}
-                    />
+              <View style={s.histForm}>
+                <View style={s.histFormRow}>
+                  <View style={s.histFormAnnee}>
+                    <Input label="Année" placeholder="2023" value={newHistAnnee} onChangeText={setNewHistAnnee} keyboardType="numeric" maxLength={4} />
                   </View>
-                  <View style={styles.histFormSurface}>
-                    <Input
-                      label="Surface (ha)"
-                      placeholder="—"
-                      value={newHistSurface}
-                      onChangeText={setNewHistSurface}
-                      keyboardType="decimal-pad"
-                    />
+                  <View style={s.histFormSurface}>
+                    <Input label="Surface (ha)" placeholder="—" value={newHistSurface} onChangeText={setNewHistSurface} keyboardType="decimal-pad" />
                   </View>
                 </View>
 
-                <Text style={styles.fieldLabel}>Culture</Text>
-                <PillSelect
-                  options={CULTURES}
-                  value={newHistCulture}
-                  onChange={v => setNewHistCulture(v as TypeCulture)}
-                />
+                <Text style={s.fieldLabel}>Culture</Text>
+                <PillSelect options={CULTURES} value={newHistCulture} onChange={v => setNewHistCulture(v as TypeCulture)} />
 
-                {histError ? <Text style={styles.histErrorText}>⚠️ {histError}</Text> : null}
+                {histError ? <Text style={s.histErrorText}>{histError}</Text> : null}
 
                 <TouchableOpacity
-                  style={styles.histAddBtn}
+                  style={s.histAddBtn}
                   onPress={() => {
                     setHistError('');
-                    if (!newHistAnnee || newHistAnnee.length !== 4) {
-                      setHistError('Entrez une année valide (ex : 2023).'); return;
-                    }
-                    if (!newHistCulture) {
-                      setHistError('Sélectionnez une culture.'); return;
-                    }
-                    setHistorique(prev => [
-                      ...prev,
-                      { annee: newHistAnnee, type_culture: newHistCulture!, surface_ha: newHistSurface },
-                    ]);
-                    setNewHistAnnee('');
-                    setNewHistCulture(null);
-                    setNewHistSurface('');
+                    if (!newHistAnnee || newHistAnnee.length !== 4) { setHistError('Entrez une année valide (ex : 2023).'); return; }
+                    if (!newHistCulture) { setHistError('Sélectionnez une culture.'); return; }
+                    setHistorique(prev => [...prev, { annee: newHistAnnee, type_culture: newHistCulture!, surface_ha: newHistSurface }]);
+                    setNewHistAnnee(''); setNewHistCulture(null); setNewHistSurface('');
                   }}
                 >
-                  <Text style={styles.histAddBtnText}>+ Ajouter cette campagne</Text>
+                  <Text style={s.histAddBtnText}>+ Ajouter cette campagne</Text>
                 </TouchableOpacity>
               </View>
 
-              {/* Liste des entrées */}
               {historique.length > 0 && (
-                <View style={styles.histList}>
+                <View style={s.histList}>
                   {historique.map((entry, i) => (
-                    <View key={i} style={styles.histEntry}>
-                      <Text style={styles.histEntryText}>
-                        <Text style={styles.histEntryYear}>{entry.annee}</Text>
+                    <View key={i} style={s.histEntry}>
+                      <Text style={s.histEntryText}>
+                        <Text style={s.histEntryYear}>{entry.annee}</Text>
                         {'  '}
                         {CULTURES.find(c => c.value === entry.type_culture)?.label ?? entry.type_culture}
                         {entry.surface_ha ? `  ·  ${entry.surface_ha} ha` : ''}
@@ -469,38 +458,37 @@ export default function ProfileSetupScreen() {
                         onPress={() => setHistorique(prev => prev.filter((_, j) => j !== i))}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
-                        <Text style={styles.histDelete}>✕</Text>
+                        <Text style={s.histDelete}>✕</Text>
                       </TouchableOpacity>
                     </View>
                   ))}
                 </View>
               )}
             </View>
-
           </View>
         )}
 
-        {/* ── Navigation ─────────────────────────────────────────────────────── */}
-        <View style={styles.nav}>
+        {/* ─── NAVIGATION ─────────────────────────────────────────────────── */}
+        <View style={s.nav}>
           {step > 1 && (
-            <Button onPress={() => setStep(step - 1)} variant="outline" style={styles.navBtn}>
-              ← Retour
+            <Button onPress={() => setStep(step - 1)} variant="outline" style={s.navBtn}>
+              Retour
             </Button>
           )}
           {step < 3 ? (
-            <Button onPress={() => { setError(''); setStep(step + 1); }} style={styles.navBtn}>
-              Suivant →
+            <Button onPress={() => { setError(''); setStep(step + 1); }} style={s.navBtn}>
+              Suivant
             </Button>
           ) : (
-            <Button onPress={handleSave} loading={loading} style={styles.navBtn}>
+            <Button onPress={handleSave} loading={loading} style={s.navBtn}>
               {isEditMode ? 'Enregistrer' : 'Terminer la configuration'}
             </Button>
           )}
         </View>
 
         {step === 1 && (
-          <TouchableOpacity style={styles.skipBtn} onPress={() => router.replace('/(app)')}>
-            <Text style={styles.skipText}>Passer, je compléterai plus tard</Text>
+          <TouchableOpacity style={s.skipBtn} onPress={() => router.replace('/(app)')}>
+            <Text style={s.skipText}>Passer, je compléterai plus tard</Text>
           </TouchableOpacity>
         )}
 
@@ -511,32 +499,60 @@ export default function ProfileSetupScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  root:               { flex: 1, backgroundColor: Colors.white },
-  container:          { paddingHorizontal: 24, paddingBottom: 48 },
-  header:             { marginBottom: 24 },
-  title:              { fontSize: 24, fontWeight: '800', color: Colors.primaryDark },
-  subtitle:           { fontSize: 13, color: Colors.textMuted, marginTop: 4 },
-  progressBar:        { flexDirection: 'row', gap: 8, marginTop: 12 },
-  progressStep:       { flex: 1, height: 4, borderRadius: 2, backgroundColor: Colors.border },
-  progressStepActive: { backgroundColor: Colors.primary },
-  errorBox:   { backgroundColor: Colors.errorBg, borderRadius: 8, padding: 12, marginBottom: 16, borderLeftWidth: 3, borderLeftColor: Colors.error },
-  errorText:  { color: Colors.errorDark, fontSize: 13 },
-  stepContent: { gap: 0 },
-  stepTitle:   { fontSize: 18, fontWeight: '700', color: Colors.primaryDark, marginBottom: 20 },
-  stepDesc:    { fontSize: 13, color: Colors.textMuted, marginBottom: 16, lineHeight: 19 },
-  fieldLabel:  { fontSize: 13, fontWeight: '600', color: Colors.text, marginBottom: 8 },
-  fieldGroup:  { marginBottom: 16 },
-  fieldSpacer: { height: 16 },
+const s = StyleSheet.create({
+  root:      { flex: 1, backgroundColor: Colors.background },
+  container: { paddingHorizontal: 0 },
+
+  // Header
+  header: {
+    backgroundColor: Colors.headerBg,
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    gap: 10,
+    marginBottom: 24,
+  },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: '#fff' },
+  headerSub:   { fontSize: 13, color: Colors.headerTextMuted, lineHeight: 19 },
+
+  // Barre de progression
+  progressRow:  { flexDirection: 'row', alignItems: 'flex-start', marginTop: 6 },
+  progressStep: { flex: 1, alignItems: 'center', position: 'relative' },
+  progressLine: { position: 'absolute', top: 14, left: '55%', right: '-45%', height: 2, backgroundColor: 'rgba(255,255,255,0.25)' },
+  progressLineActive: { backgroundColor: 'rgba(255,255,255,0.7)' },
+  progressDot:        { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  progressDotActive:  { backgroundColor: Colors.primaryLight },
+  progressDotDone:    { backgroundColor: Colors.primary },
+  progressDotNum:     { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.5)' },
+  progressDotNumActive:{ color: '#fff' },
+  progressDotCheck:   { fontSize: 12, fontWeight: '900', color: '#fff' },
+  progressLabel:      { fontSize: 10, color: 'rgba(255,255,255,0.4)', textAlign: 'center' },
+  progressLabelActive:{ color: 'rgba(255,255,255,0.85)' },
+
+  // Erreur
+  errorBox:  { marginHorizontal: 22, marginBottom: 16, backgroundColor: Colors.errorBg, borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: Colors.error },
+  errorText: { color: Colors.errorDark, fontSize: 13 },
+
+  // Step card
+  stepCard:  { marginHorizontal: 22, gap: 0, marginBottom: 8 },
+  stepTitle: { fontSize: 18, fontWeight: '700', color: Colors.primaryDark, marginBottom: 20 },
+  stepDesc:  { fontSize: 13, color: Colors.textMuted, marginBottom: 16, lineHeight: 19 },
+
+  fieldLabel:  { fontSize: 13, fontWeight: '600', color: Colors.text, marginBottom: 8, marginTop: 8 },
+  fieldGroup:  { marginBottom: 8 },
+  fieldSpacer: { height: 12 },
   inputSm:     { maxWidth: 200 },
   row:         { flexDirection: 'row', gap: 12 },
   flex1:       { flex: 1 },
   flex2:       { flex: 2 },
   flex3:       { flex: 3 },
+
   stepper:        { flexDirection: 'row', alignItems: 'center', gap: 16 },
   stepperBtn:     { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
   stepperBtnText: { fontSize: 20, color: Colors.primary, lineHeight: 24 },
   stepperValue:   { fontSize: 22, fontWeight: '700', color: Colors.primaryDark, minWidth: 30, textAlign: 'center' },
+
   // Tableau cultures
   culturesDetail: { marginTop: 20 },
   cultureHeader:  { flexDirection: 'row', paddingBottom: 6, borderBottomWidth: 2, borderBottomColor: Colors.border, marginBottom: 4 },
@@ -544,19 +560,22 @@ const styles = StyleSheet.create({
   cultureCol:     { flex: 1, fontSize: 13, color: Colors.textMuted, fontWeight: '600', textAlign: 'center' },
   cultureColLabel:{ flex: 1.4, textAlign: 'left', color: Colors.text, fontWeight: '500', fontSize: 13 },
   cultureInput:   { borderWidth: 1, borderColor: Colors.border, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, fontSize: 13, textAlign: 'center', color: Colors.text, fontWeight: '400' },
-  surfaceBilan:       { marginTop: 14, backgroundColor: Colors.border, borderRadius: 8, padding: 12 },
+  surfaceBilan:       { marginTop: 14, backgroundColor: Colors.backgroundAlt, borderRadius: 8, padding: 12 },
   surfaceBilanOk:     { backgroundColor: Colors.successBg },
   surfaceBilanText:   { fontSize: 13, color: Colors.textMuted, fontWeight: '500' },
   surfaceBilanTextOk: { color: Colors.success },
-  nav:      { flexDirection: 'row', gap: 12, marginTop: 32 },
-  navBtn:   { flex: 1 },
-  skipBtn:  { alignItems: 'center', marginTop: 16 },
-  skipText: { fontSize: 13, color: Colors.textMuted, textDecorationLine: 'underline' },
+
+  // Nav
+  nav:    { flexDirection: 'row', gap: 12, marginTop: 28, paddingHorizontal: 22 },
+  navBtn: { flex: 1 },
+  skipBtn:{ alignItems: 'center', marginTop: 16, paddingBottom: 8 },
+  skipText:{ fontSize: 13, color: Colors.textMuted, textDecorationLine: 'underline' },
+
   // Historique
-  histSection:    { marginTop: 32, paddingTop: 24, borderTopWidth: 1, borderTopColor: Colors.border },
+  histSection:    { marginTop: 28, paddingTop: 20, borderTopWidth: 1, borderTopColor: Colors.border },
   histTitle:      { fontSize: 16, fontWeight: '700', color: Colors.primaryDark, marginBottom: 6 },
   histDesc:       { fontSize: 12, color: Colors.textMuted, lineHeight: 18, marginBottom: 16 },
-  histForm:       { backgroundColor: Colors.background ?? '#F8F9FA', borderRadius: 12, padding: 16, marginBottom: 12 },
+  histForm:       { backgroundColor: Colors.backgroundAlt, borderRadius: 12, padding: 16, marginBottom: 12 },
   histFormRow:    { flexDirection: 'row', gap: 12 },
   histFormAnnee:  { flex: 1 },
   histFormSurface:{ flex: 1 },

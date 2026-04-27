@@ -1,81 +1,157 @@
 /**
- * app/index.tsx — Landing page (utilisateur non connecté)
+ * app/index.tsx — Page d'accueil AgroPilot
+ * Présentation claire de l'application et de sa valeur pour l'agriculteur.
+ * Guard de navigation : géré par _layout.tsx (pas de redirect ici).
  */
 import { ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 
-const FEATURES = [
-  {
-    icon: '📊',
-    label: 'Simulation de rentabilité',
-    desc: 'Croisez vos charges et rendements pour anticiper vos marges',
-  },
-  {
-    icon: '💶',
-    label: 'Aide aux subventions',
-    desc: 'Découvrez toutes les aides auxquelles vous avez droit',
-  },
-  {
-    icon: '🌤️',
-    label: 'Météo locale',
-    desc: 'Conditions météo en temps réel pour votre exploitation',
-  },
-];
+// ─── Carte fonctionnalité ─────────────────────────────────────────────────────
+
+function FeatureCard({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+  return (
+    <View style={s.featureCard}>
+      <View style={s.featureIconBox}>
+        <Text style={s.featureIconEmoji}>{icon}</Text>
+      </View>
+      <Text style={s.featureTitle}>{title}</Text>
+      <Text style={s.featureDesc}>{desc}</Text>
+    </View>
+  );
+}
+
+// ─── Chiffre clé ─────────────────────────────────────────────────────────────
+
+function StatBox({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={s.statBox}>
+      <Text style={s.statValue}>{value}</Text>
+      <Text style={s.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+// ─── Écran ────────────────────────────────────────────────────────────────────
 
 export default function LandingScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  // Pas de redirect ici — le guard _layout.tsx est la seule autorité de navigation.
-  // Si l'utilisateur a une session active, le guard le renvoie vers /(app) directement.
-  // Si l'utilisateur vient de se déconnecter, il doit voir cette page sans bounce-back.
 
   return (
-    <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + 32 }]} showsVerticalScrollIndicator={false}>
+    <View style={s.root}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.headerBg} />
 
-        {/* Hero */}
-        <View style={styles.hero}>
-          <Text style={styles.heroIcon}>🌾</Text>
-          <Text style={styles.heroTitle}>AgroPilot</Text>
-          <Text style={styles.heroSubtitle}>Votre copilote financier agricole</Text>
-          <Text style={styles.heroDesc}>
-            Prenez les meilleures décisions face à la volatilité des marchés,
-            l'explosion des coûts et la complexité administrative.
+      <ScrollView
+        contentContainerStyle={[s.container, { paddingBottom: insets.bottom + 48 }]}
+        showsVerticalScrollIndicator={false}
+      >
+
+        {/* ─── HERO ───────────────────────────────────────────────────────── */}
+        <View style={[s.hero, { paddingTop: insets.top + 36 }]}>
+          {/* Logo — remplacer par <Image source={require('@/assets/images/logo-light.png')} /> */}
+          <View style={s.logoRow}>
+            <View style={s.logoSquare}>
+              <Text style={s.logoLetter}>A</Text>
+            </View>
+            <View>
+              <Text style={s.logoName}>AgroPilot</Text>
+              <Text style={s.logoTagline}>PRÉVISION AGRICOLE</Text>
+            </View>
+          </View>
+
+          <Text style={s.heroTitle}>
+            Gérez votre exploitation{'\n'}avec un coup d'avance
+          </Text>
+          <Text style={s.heroSub}>
+            Volatilité des marchés, explosion des coûts, dossiers d'aides
+            complexes — AgroPilot vous aide à voir clair et à décider au bon moment.
+          </Text>
+
+          <TouchableOpacity
+            style={s.btnPrimary}
+            onPress={() => router.push('/(auth)/register')}
+            activeOpacity={0.88}
+          >
+            <Text style={s.btnPrimaryText}>Commencer gratuitement</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={s.btnSecondary}
+            onPress={() => router.push('/(auth)/login')}
+            activeOpacity={0.88}
+          >
+            <Text style={s.btnSecondaryText}>J'ai déjà un compte →</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ─── STATS ──────────────────────────────────────────────────────── */}
+        <View style={s.statsCard}>
+          <StatBox value="7 j" label="Prévisions météo" />
+          <View style={s.statDivider} />
+          <StatBox value="PAC" label="Aides EU incluses" />
+          <View style={s.statDivider} />
+          <StatBox value="100%" label="Gratuit" />
+        </View>
+
+        {/* ─── PROBLÈME ───────────────────────────────────────────────────── */}
+        <View style={s.section}>
+          <Text style={s.sectionEyebrow}>POUR QUOI FAIRE ?</Text>
+          <Text style={s.sectionTitle}>Votre exploitation mérite mieux qu'un tableur</Text>
+          <Text style={s.sectionBody}>
+            Entre les prix du blé qui varient du simple au double en quelques mois,
+            les charges qui augmentent et les dossiers PAC à remplir, prendre les
+            bonnes décisions est devenu un travail à plein temps.{'\n\n'}
+            AgroPilot centralise les données qui comptent et fait le calcul à votre place.
           </Text>
         </View>
 
-        {/* Fonctionnalités */}
-        <View style={styles.features}>
-          {FEATURES.map((f, i) => (
-            <View key={i} style={styles.featureCard}>
-              <Text style={styles.featureIcon}>{f.icon}</Text>
-              <View style={styles.featureText}>
-                <Text style={styles.featureLabel}>{f.label}</Text>
-                <Text style={styles.featureDesc}>{f.desc}</Text>
-              </View>
-            </View>
-          ))}
+        {/* ─── FONCTIONNALITÉS ────────────────────────────────────────────── */}
+        <View style={s.section}>
+          <Text style={s.sectionEyebrow}>CE QU'ON FAIT POUR VOUS</Text>
+
+          <FeatureCard
+            icon="📈"
+            title="Tendances de marché"
+            desc="Suivez les prix du blé, maïs, colza et soja. Comparez avec vos coûts de production pour vendre au bon moment."
+          />
+          <FeatureCard
+            icon="🧮"
+            title="Simulation de rentabilité"
+            desc="Avant de semer, calculez votre marge nette par hectare en croisant charges réelles, rendement estimé et prix de marché."
+          />
+          <FeatureCard
+            icon="💶"
+            title="Subventions PAC & régionales"
+            desc="L'IA identifie les aides disponibles pour votre exploitation et vous dit si vous êtes éligible, sans que vous ayez à chercher."
+          />
+          <FeatureCard
+            icon="🌦️"
+            title="Météo agricole détaillée"
+            desc="ETP, température du sol, risque de gel, conditions de traitement phytosanitaire — toutes les données utiles sur le terrain."
+          />
         </View>
 
-        {/* CTA */}
-        <View style={styles.cta}>
-          <TouchableOpacity
-            style={styles.primaryBtn}
-            onPress={() => router.push('/(auth)/register')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.primaryBtnText}>Je m'inscris</Text>
-          </TouchableOpacity>
+        {/* ─── PROMESSE ───────────────────────────────────────────────────── */}
+        <View style={s.promiseBlock}>
+          <Text style={s.promiseTitle}>Conçu pour les agriculteurs,{'\n'}pas pour les comptables</Text>
+          <Text style={s.promiseBody}>
+            Pas de jargon financier inutile. Des chiffres clairs, des alertes au bon
+            moment, et des recommandations que vous pouvez comprendre sans être expert.
+          </Text>
+        </View>
 
-          <View style={styles.loginRow}>
-            <Text style={styles.loginText}>Déjà un compte ? </Text>
-            <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-              <Text style={styles.loginLink}>Se connecter</Text>
-            </TouchableOpacity>
-          </View>
+        {/* ─── CTA BAS ────────────────────────────────────────────────────── */}
+        <View style={s.bottomCta}>
+          <TouchableOpacity
+            style={s.btnFull}
+            onPress={() => router.push('/(auth)/register')}
+            activeOpacity={0.88}
+          >
+            <Text style={s.btnFullText}>Créer mon compte gratuitement</Text>
+          </TouchableOpacity>
+          <Text style={s.bottomNote}>Sans carte bancaire · Sans engagement</Text>
         </View>
 
       </ScrollView>
@@ -83,27 +159,100 @@ export default function LandingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root:      { flex: 1, backgroundColor: Colors.white },
-  container: { flexGrow: 1, paddingHorizontal: 28, paddingBottom: 48 },
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  root:      { flex: 1, backgroundColor: Colors.background },
+  container: { flexGrow: 1 },
+
   // Hero
-  hero:         { alignItems: 'center', marginBottom: 40 },
-  heroIcon:     { fontSize: 64, marginBottom: 12 },
-  heroTitle:    { fontSize: 38, fontWeight: '800', color: Colors.primaryDark, letterSpacing: 0.5 },
-  heroSubtitle: { fontSize: 16, color: Colors.primary, fontWeight: '600', marginTop: 6, textAlign: 'center' },
-  heroDesc:     { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 21, marginTop: 12, paddingHorizontal: 8 },
-  // Features
-  features:     { gap: 12, marginBottom: 40 },
-  featureCard:  { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: Colors.primaryBg, borderRadius: 14, padding: 16, gap: 14 },
-  featureIcon:  { fontSize: 28, lineHeight: 34 },
-  featureText:  { flex: 1 },
-  featureLabel: { fontSize: 14, fontWeight: '700', color: Colors.primaryDark, marginBottom: 3 },
-  featureDesc:  { fontSize: 13, color: Colors.primaryMuted, lineHeight: 18 },
-  // CTA
-  cta:           { alignItems: 'center', gap: 20 },
-  primaryBtn:    { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 18, width: '100%', alignItems: 'center', shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 },
-  primaryBtnText:{ color: '#fff', fontSize: 18, fontWeight: '700', letterSpacing: 0.3 },
-  loginRow:      { flexDirection: 'row', alignItems: 'center' },
-  loginText:     { color: Colors.textMuted, fontSize: 14 },
-  loginLink:     { color: Colors.primary, fontSize: 14, fontWeight: '600' },
+  hero: {
+    backgroundColor: Colors.headerBg,
+    paddingHorizontal: 26,
+    paddingBottom: 48,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    gap: 16,
+  },
+
+  // Logo
+  logoRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
+  logoSquare: { width: 46, height: 46, borderRadius: 13, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  logoLetter: { fontSize: 24, fontWeight: '900', color: '#fff' },
+  logoName:   { fontSize: 20, fontWeight: '800', color: '#fff' },
+  logoTagline:{ fontSize: 9, color: Colors.headerTextMuted, letterSpacing: 2.5, marginTop: 1 },
+
+  // Hero textes
+  heroTitle: { fontSize: 30, fontWeight: '900', color: '#fff', lineHeight: 37, marginTop: 4 },
+  heroSub:   { fontSize: 15, color: Colors.headerTextMuted, lineHeight: 23 },
+
+  // Boutons hero
+  btnPrimary:     { backgroundColor: '#fff', borderRadius: 14, paddingVertical: 17, alignItems: 'center', marginTop: 4 },
+  btnPrimaryText: { fontSize: 16, fontWeight: '800', color: Colors.primaryDark },
+  btnSecondary:   { paddingVertical: 10, alignItems: 'center' },
+  btnSecondaryText: { fontSize: 15, color: Colors.headerTextMuted, fontWeight: '600' },
+
+  // Stats card
+  statsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    marginHorizontal: 20,
+    marginTop: -20,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 6,
+  },
+  statBox:    { flex: 1, alignItems: 'center' },
+  statValue:  { fontSize: 22, fontWeight: '900', color: Colors.primaryDark },
+  statLabel:  { fontSize: 11, color: Colors.textMuted, marginTop: 2, textAlign: 'center' },
+  statDivider:{ width: 1, height: 34, backgroundColor: Colors.border },
+
+  // Sections
+  section:      { paddingHorizontal: 22, paddingTop: 38, gap: 14 },
+  sectionEyebrow:{ fontSize: 11, fontWeight: '700', color: Colors.primary, letterSpacing: 2, textTransform: 'uppercase' },
+  sectionTitle:  { fontSize: 23, fontWeight: '800', color: Colors.primaryDark, lineHeight: 29, marginTop: -2 },
+  sectionBody:   { fontSize: 15, color: Colors.textMuted, lineHeight: 23 },
+
+  // Feature cards
+  featureCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 20,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  featureIconBox:   { width: 46, height: 46, borderRadius: 13, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+  featureIconEmoji: { fontSize: 22 },
+  featureTitle:     { fontSize: 16, fontWeight: '700', color: Colors.primaryDark },
+  featureDesc:      { fontSize: 14, color: Colors.textMuted, lineHeight: 21 },
+
+  // Promise block
+  promiseBlock: {
+    marginHorizontal: 22,
+    marginTop: 36,
+    backgroundColor: Colors.aiCardBg,
+    borderRadius: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.aiCardBorder,
+    padding: 22,
+    gap: 10,
+  },
+  promiseTitle: { fontSize: 19, fontWeight: '800', color: Colors.primaryDark, lineHeight: 25 },
+  promiseBody:  { fontSize: 14, color: Colors.textMuted, lineHeight: 21 },
+
+  // Bottom CTA
+  bottomCta:  { paddingHorizontal: 22, paddingTop: 40, gap: 12 },
+  btnFull:    { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 17, alignItems: 'center' },
+  btnFullText:{ fontSize: 16, fontWeight: '800', color: '#fff' },
+  bottomNote: { fontSize: 13, color: Colors.textMuted, textAlign: 'center' },
 });

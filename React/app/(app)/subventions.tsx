@@ -8,8 +8,8 @@
  */
 import { useState } from 'react';
 import {
-  Linking, ScrollView, StyleSheet, Text,
-  TouchableOpacity, View, ActivityIndicator,
+  ActivityIndicator, Linking, ScrollView, StyleSheet,
+  Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProfile } from '@/hooks/useProfile';
@@ -19,13 +19,13 @@ import { Colors } from '@/constants/Colors';
 // ─── Badges catégorie ─────────────────────────────────────────────────────────
 
 const CATEGORIE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  pac:           { label: 'PAC / UE',       color: '#1565C0', bg: '#E3F2FD' },
-  national:      { label: 'National',       color: '#2E7D32', bg: '#E8F5E9' },
-  regional:      { label: 'Régional',       color: '#6A1B9A', bg: '#F3E5F5' },
-  certification: { label: 'Certification',  color: '#E65100', bg: '#FFF3E0' },
+  pac:           { label: 'PAC / UE',      color: '#1565C0', bg: '#E3F2FD' },
+  national:      { label: 'National',      color: '#2D6A0A', bg: '#E8EFD8' },
+  regional:      { label: 'Régional',      color: '#6A1B9A', bg: '#F3E5F5' },
+  certification: { label: 'Certification', color: '#D65100', bg: '#FFF0E0' },
 };
 
-// ─── Composant carte ──────────────────────────────────────────────────────────
+// ─── Composant carte subvention ───────────────────────────────────────────────
 
 function SubventionCardView({ card }: { card: SubventionCard }) {
   const [open, setOpen] = useState(false);
@@ -33,52 +33,54 @@ function SubventionCardView({ card }: { card: SubventionCard }) {
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={s.card}
       onPress={() => setOpen(v => !v)}
       activeOpacity={0.85}
     >
       {/* En-tête */}
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderLeft}>
-          <View style={[styles.catBadge, { backgroundColor: cat.bg }]}>
-            <Text style={[styles.catBadgeText, { color: cat.color }]}>{cat.label}</Text>
+      <View style={s.cardHeader}>
+        <View style={s.cardHeaderLeft}>
+          <View style={[s.catBadge, { backgroundColor: cat.bg }]}>
+            <Text style={[s.catBadgeText, { color: cat.color }]}>{cat.label}</Text>
           </View>
-          <View style={styles.scoreDots}>
+          <View style={s.scoreDots}>
             {[1, 2, 3, 4, 5].map(i => (
               <View
                 key={i}
-                style={[styles.scoreDot, i <= card.score && styles.scoreDotActive]}
+                style={[s.scoreDot, i <= card.score && s.scoreDotActive]}
               />
             ))}
           </View>
         </View>
-        <Text style={styles.cardChevron}>{open ? '▲' : '▼'}</Text>
+        <Text style={s.cardChevron}>{open ? '▲' : '▼'}</Text>
       </View>
 
-      <Text style={styles.cardTitle}>{card.nom}</Text>
-      <Text style={styles.cardOrganisme}>{card.organisme}</Text>
-      <Text style={styles.cardMontant}>{card.montant_label}</Text>
+      <Text style={s.cardTitle}>{card.nom}</Text>
+      <Text style={s.cardOrganisme}>{card.organisme}</Text>
+      <Text style={s.cardMontant}>{card.montant_label}</Text>
 
       {/* Détails dépliables */}
       {open && (
-        <View style={styles.cardBody}>
-          <View style={styles.cardDivider} />
+        <View style={s.cardBody}>
+          <View style={s.cardDivider} />
 
-          <Text style={styles.cardSectionLabel}>📋 Description</Text>
-          <Text style={styles.cardText}>{card.description}</Text>
+          <Text style={s.cardSectionLabel}>Description</Text>
+          <Text style={s.cardText}>{card.description}</Text>
 
-          <Text style={styles.cardSectionLabel}>✅ Pourquoi vous êtes éligible</Text>
-          <Text style={[styles.cardText, styles.cardTextEligible]}>{card.pourquoi_eligible}</Text>
+          <Text style={s.cardSectionLabel}>Pourquoi vous êtes éligible</Text>
+          <View style={s.eligibleBlock}>
+            <Text style={s.cardTextEligible}>{card.pourquoi_eligible}</Text>
+          </View>
 
-          <Text style={styles.cardSectionLabel}>📌 Démarches</Text>
-          <Text style={styles.cardText}>{card.demarches}</Text>
+          <Text style={s.cardSectionLabel}>Démarches</Text>
+          <Text style={s.cardText}>{card.demarches}</Text>
 
           {card.url && (
             <TouchableOpacity
-              style={styles.cardLink}
+              style={s.cardLink}
               onPress={() => Linking.openURL(card.url!)}
             >
-              <Text style={styles.cardLinkText}>🔗 En savoir plus →</Text>
+              <Text style={s.cardLinkText}>En savoir plus →</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -114,110 +116,146 @@ export default function SubventionsScreen() {
 
   if (profileLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+      <View style={s.loadScreen}>
+        <View style={[s.header, { paddingTop: insets.top + 24 }]}>
+          <Text style={s.headerTitle}>Aides & Subventions</Text>
+        </View>
+        <View style={s.center}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
       </View>
     );
   }
 
   return (
     <ScrollView
-      style={styles.root}
-      contentContainerStyle={[
-        styles.container,
-        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 },
-      ]}
+      style={s.root}
+      contentContainerStyle={[s.container, { paddingBottom: insets.bottom + 32 }]}
+      showsVerticalScrollIndicator={false}
     >
-      {/* ── En-tête ──────────────────────────────────────────────────────── */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Aides & Subventions</Text>
-        <Text style={styles.subtitle}>
-          L'IA analyse votre profil en temps réel pour identifier les aides auxquelles vous pouvez prétendre.
+
+      {/* ─── HEADER ─────────────────────────────────────────────────────── */}
+      <View style={[s.header, { paddingTop: insets.top + 24 }]}>
+        <Text style={s.headerTitle}>Aides & Subventions</Text>
+        <Text style={s.headerSub}>
+          L'IA analyse votre profil pour identifier les aides auxquelles vous pouvez prétendre.
         </Text>
+
+        {/* Badges catégories */}
+        <View style={s.tagRow}>
+          {Object.values(CATEGORIE_CONFIG).map(c => (
+            <View key={c.label} style={[s.tag, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
+              <Text style={s.tagText}>{c.label}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
-      {/* ── Profil incomplet ─────────────────────────────────────────────── */}
+      {/* ─── PROFIL INCOMPLET ────────────────────────────────────────────── */}
       {!isComplete && (
-        <View style={styles.warningBox}>
-          <Text style={styles.warningText}>
-            ⚠️ Votre profil d'exploitation est incomplet. Complétez-le pour obtenir des suggestions personnalisées.
+        <View style={s.warningBox}>
+          <Text style={s.warningText}>
+            Votre profil d'exploitation est incomplet. Complétez-le pour obtenir des suggestions personnalisées et précises.
           </Text>
         </View>
       )}
 
-      {/* ── CTA initial ──────────────────────────────────────────────────── */}
+      {/* ─── CTA INITIAL ─────────────────────────────────────────────────── */}
       {!analysing && !cards && (
-        <View style={styles.cta}>
-          <Text style={styles.ctaIcon}>🤖</Text>
-          <Text style={styles.ctaTitle}>Analyse IA personnalisée</Text>
-          <Text style={styles.ctaDesc}>
-            Tavily recherche les aides 2024-2025 en temps réel.{'\n'}
-            Claude croise avec votre profil et identifie vos éligibilités.
-          </Text>
+        <View style={s.ctaBlock}>
+          {/* Bloc "Analyse IA" */}
+          <View style={s.aiCard}>
+            <Text style={s.aiLabel}>ANALYSE IA</Text>
+            <Text style={s.aiTitle}>Trouvez vos aides en 30 secondes</Text>
+            <Text style={s.aiBody}>
+              Tavily recherche les aides 2024-2025 en temps réel. Claude croise avec votre profil et identifie vos éligibilités précisément.
+            </Text>
+          </View>
+
+          {/* Comment ça marche */}
+          <View style={s.stepsBlock}>
+            <Text style={s.stepsTitle}>Comment ça fonctionne</Text>
+            <View style={s.step}>
+              <View style={s.stepNum}><Text style={s.stepNumText}>1</Text></View>
+              <Text style={s.stepText}>L'IA recherche les aides agricoles actuelles (PAC, régionales, nationales)</Text>
+            </View>
+            <View style={s.step}>
+              <View style={s.stepNum}><Text style={s.stepNumText}>2</Text></View>
+              <Text style={s.stepText}>Elle croise avec votre profil : type d'exploitation, surface, certifications</Text>
+            </View>
+            <View style={s.step}>
+              <View style={s.stepNum}><Text style={s.stepNumText}>3</Text></View>
+              <Text style={s.stepText}>Vous obtenez une liste personnalisée avec les démarches à suivre</Text>
+            </View>
+          </View>
 
           <TouchableOpacity
-            style={[styles.ctaBtn, !isComplete && styles.ctaBtnDisabled]}
+            style={[s.ctaBtn, !isComplete && s.ctaBtnDisabled]}
             onPress={handleAnalyse}
             disabled={!isComplete}
           >
-            <Text style={styles.ctaBtnText}>
-              {isComplete ? '✨ Analyser mon profil' : 'Complétez votre profil d\'abord'}
+            <Text style={s.ctaBtnText}>
+              {isComplete ? 'Analyser mon profil' : 'Complétez votre profil d\'abord'}
             </Text>
           </TouchableOpacity>
-
-          <View style={styles.tagRow}>
-            {Object.values(CATEGORIE_CONFIG).map(c => (
-              <View key={c.label} style={[styles.tag, { backgroundColor: c.bg }]}>
-                <Text style={[styles.tagText, { color: c.color }]}>{c.label}</Text>
-              </View>
-            ))}
-          </View>
         </View>
       )}
 
-      {/* ── Loading ───────────────────────────────────────────────────────── */}
+      {/* ─── CHARGEMENT ──────────────────────────────────────────────────── */}
       {analysing && (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color={Colors.primary} style={{ marginBottom: 20 }} />
-          <Text style={styles.loadingTitle}>Analyse en cours…</Text>
-          <Text style={styles.loadingStep}>🔍 Recherche des aides récentes (Tavily)</Text>
-          <Text style={styles.loadingStep}>🤖 Analyse d'éligibilité (Claude)</Text>
-          <Text style={styles.loadingStep}>📋 Génération des cartes personnalisées</Text>
-          <Text style={styles.loadingNote}>Cela peut prendre 15 à 30 secondes.</Text>
+        <View style={s.loadingBox}>
+          <ActivityIndicator size="large" color={Colors.primary} style={{ marginBottom: 24 }} />
+          <Text style={s.loadingTitle}>Analyse en cours…</Text>
+          <View style={s.loadingSteps}>
+            <View style={s.loadingStep}>
+              <View style={s.loadingDot} />
+              <Text style={s.loadingStepText}>Recherche des aides récentes</Text>
+            </View>
+            <View style={s.loadingStep}>
+              <View style={s.loadingDot} />
+              <Text style={s.loadingStepText}>Analyse d'éligibilité sur votre profil</Text>
+            </View>
+            <View style={s.loadingStep}>
+              <View style={s.loadingDot} />
+              <Text style={s.loadingStepText}>Génération des fiches personnalisées</Text>
+            </View>
+          </View>
+          <Text style={s.loadingNote}>Cela peut prendre 15 à 30 secondes.</Text>
         </View>
       )}
 
-      {/* ── Erreur ────────────────────────────────────────────────────────── */}
+      {/* ─── ERREUR ──────────────────────────────────────────────────────── */}
       {!!error && (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>⚠️ {error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={handleAnalyse}>
-            <Text style={styles.retryBtnText}>Réessayer</Text>
+        <View style={s.errorBox}>
+          <Text style={s.errorTitle}>Une erreur est survenue</Text>
+          <Text style={s.errorText}>{error}</Text>
+          <TouchableOpacity style={s.retryBtn} onPress={handleAnalyse}>
+            <Text style={s.retryBtnText}>Réessayer</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* ── Résultats ─────────────────────────────────────────────────────── */}
+      {/* ─── RÉSULTATS ───────────────────────────────────────────────────── */}
       {cards && (
-        <View>
-          <View style={styles.resultsHeader}>
-            <Text style={styles.resultsTitle}>
-              {cards.length} aide{cards.length > 1 ? 's' : ''} identifiée{cards.length > 1 ? 's' : ''}
-            </Text>
-            <TouchableOpacity onPress={handleAnalyse}>
-              <Text style={styles.refreshBtn}>↻ Actualiser</Text>
+        <View style={s.resultsBlock}>
+          <View style={s.resultsHeader}>
+            <View>
+              <Text style={s.resultsTitle}>
+                {cards.length} aide{cards.length > 1 ? 's' : ''} identifiée{cards.length > 1 ? 's' : ''}
+              </Text>
+              <Text style={s.resultsHint}>Appuyez sur une fiche pour voir les démarches</Text>
+            </View>
+            <TouchableOpacity style={s.refreshBtn} onPress={handleAnalyse}>
+              <Text style={s.refreshBtnText}>Actualiser</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.resultsHint}>
-            Appuyez sur une carte pour voir les détails et les démarches.
-          </Text>
 
           {cards.map((card, i) => (
             <SubventionCardView key={i} card={card} />
           ))}
 
-          <Text style={styles.disclaimer}>
-            ⚡ Ces suggestions sont générées par IA à titre informatif. Vérifiez votre éligibilité auprès des organismes concernés avant toute démarche.
+          <Text style={s.disclaimer}>
+            Ces suggestions sont générées par IA à titre informatif. Vérifiez votre éligibilité auprès des organismes concernés avant toute démarche.
           </Text>
         </View>
       )}
@@ -227,62 +265,115 @@ export default function SubventionsScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  root:      { flex: 1, backgroundColor: Colors.white },
-  container: { paddingHorizontal: 20 },
-  center:    { flex: 1, alignItems: 'center', justifyContent: 'center' },
+const s = StyleSheet.create({
+  root:      { flex: 1, backgroundColor: Colors.background },
+  container: { paddingHorizontal: 0 },
+  loadScreen:{ flex: 1, backgroundColor: Colors.background },
+  center:    { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
 
-  header:   { marginBottom: 20 },
-  title:    { fontSize: 26, fontWeight: '800', color: Colors.primaryDark },
-  subtitle: { fontSize: 13, color: Colors.textMuted, marginTop: 6, lineHeight: 19 },
+  // Header
+  header: {
+    backgroundColor: Colors.headerBg,
+    paddingHorizontal: 22,
+    paddingBottom: 32,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    gap: 10,
+    marginBottom: 22,
+  },
+  headerTitle: { fontSize: 26, fontWeight: '900', color: '#fff' },
+  headerSub:   { fontSize: 13, color: Colors.headerTextMuted, lineHeight: 20 },
+  tagRow:      { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  tag:         { borderRadius: 20, paddingVertical: 4, paddingHorizontal: 12 },
+  tagText:     { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.8)' },
 
-  warningBox:  { backgroundColor: Colors.warningBg, borderRadius: 10, padding: 14, marginBottom: 16, borderLeftWidth: 3, borderLeftColor: Colors.warning },
+  // Warning
+  warningBox:  { marginHorizontal: 22, marginBottom: 18, backgroundColor: Colors.warningBg, borderRadius: 12, padding: 16, borderLeftWidth: 3, borderLeftColor: Colors.warning },
   warningText: { fontSize: 13, color: '#7B5800', lineHeight: 19 },
 
-  cta:            { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 8 },
-  ctaIcon:        { fontSize: 52, marginBottom: 12 },
-  ctaTitle:       { fontSize: 18, fontWeight: '700', color: Colors.primaryDark, marginBottom: 10 },
-  ctaDesc:        { fontSize: 13, color: Colors.textMuted, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
-  ctaBtn:         { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 32, width: '100%', alignItems: 'center', marginBottom: 20 },
+  // CTA block
+  ctaBlock: { paddingHorizontal: 22, gap: 16 },
+
+  // Bloc IA
+  aiCard: {
+    backgroundColor: Colors.aiCardBg,
+    borderRadius: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.aiCardBorder,
+    padding: 20,
+    gap: 8,
+  },
+  aiLabel: { fontSize: 10, fontWeight: '700', color: Colors.primary, letterSpacing: 2, textTransform: 'uppercase' },
+  aiTitle: { fontSize: 18, fontWeight: '800', color: Colors.primaryDark },
+  aiBody:  { fontSize: 14, color: Colors.textMuted, lineHeight: 20 },
+
+  // Steps
+  stepsBlock: { backgroundColor: Colors.white, borderRadius: 16, padding: 20, gap: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+  stepsTitle: { fontSize: 14, fontWeight: '700', color: Colors.primaryDark, marginBottom: 2 },
+  step:        { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  stepNum:     { width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  stepNumText: { fontSize: 12, fontWeight: '800', color: Colors.primary },
+  stepText:    { flex: 1, fontSize: 13, color: Colors.textMuted, lineHeight: 19 },
+
+  // CTA btn
+  ctaBtn:         { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 17, alignItems: 'center' },
   ctaBtnDisabled: { backgroundColor: Colors.border },
   ctaBtnText:     { color: '#fff', fontSize: 16, fontWeight: '700' },
-  tagRow:         { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
-  tag:            { borderRadius: 20, paddingVertical: 4, paddingHorizontal: 12 },
-  tagText:        { fontSize: 11, fontWeight: '600' },
 
-  loadingBox:    { alignItems: 'center', paddingVertical: 40 },
-  loadingTitle:  { fontSize: 16, fontWeight: '700', color: Colors.primaryDark, marginBottom: 20 },
-  loadingStep:   { fontSize: 13, color: Colors.textMuted, marginBottom: 8 },
-  loadingNote:   { fontSize: 12, color: Colors.textMuted, marginTop: 16, fontStyle: 'italic' },
+  // Loading
+  loadingBox:      { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 22 },
+  loadingTitle:    { fontSize: 18, fontWeight: '700', color: Colors.primaryDark, marginBottom: 24 },
+  loadingSteps:    { gap: 12, alignSelf: 'stretch', marginBottom: 20 },
+  loadingStep:     { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  loadingDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary },
+  loadingStepText: { fontSize: 14, color: Colors.textMuted },
+  loadingNote:     { fontSize: 12, color: Colors.textMuted, fontStyle: 'italic' },
 
-  errorBox:     { backgroundColor: Colors.errorBg, borderRadius: 10, padding: 16, marginBottom: 16, borderLeftWidth: 3, borderLeftColor: Colors.error },
-  errorText:    { fontSize: 13, color: Colors.errorDark, lineHeight: 19, marginBottom: 12 },
-  retryBtn:     { alignSelf: 'flex-start', backgroundColor: Colors.error, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 16 },
-  retryBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  // Error
+  errorBox:   { marginHorizontal: 22, backgroundColor: Colors.errorBg, borderRadius: 12, padding: 18, borderLeftWidth: 3, borderLeftColor: Colors.error, gap: 8 },
+  errorTitle: { fontSize: 15, fontWeight: '700', color: Colors.errorDark },
+  errorText:  { fontSize: 13, color: Colors.errorDark, lineHeight: 19 },
+  retryBtn:   { alignSelf: 'flex-start', backgroundColor: Colors.error, borderRadius: 8, paddingVertical: 9, paddingHorizontal: 18, marginTop: 4 },
+  retryBtnText:{ color: '#fff', fontSize: 13, fontWeight: '600' },
 
-  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  resultsTitle:  { fontSize: 16, fontWeight: '700', color: Colors.primaryDark },
-  refreshBtn:    { fontSize: 13, color: Colors.primary, fontWeight: '600' },
-  resultsHint:   { fontSize: 12, color: Colors.textMuted, marginBottom: 16 },
+  // Results
+  resultsBlock:  { paddingHorizontal: 22 },
+  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+  resultsTitle:  { fontSize: 18, fontWeight: '800', color: Colors.primaryDark },
+  resultsHint:   { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+  refreshBtn:    { backgroundColor: Colors.primaryBg, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14 },
+  refreshBtnText:{ fontSize: 13, color: Colors.primary, fontWeight: '700' },
   disclaimer:    { fontSize: 11, color: Colors.textMuted, marginTop: 20, lineHeight: 17, fontStyle: 'italic', textAlign: 'center' },
 
-  card:            { backgroundColor: Colors.white, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: Colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
-  cardHeader:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  cardHeaderLeft:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  catBadge:        { borderRadius: 20, paddingVertical: 3, paddingHorizontal: 10 },
-  catBadgeText:    { fontSize: 11, fontWeight: '700' },
-  scoreDots:       { flexDirection: 'row', gap: 3 },
-  scoreDot:        { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.border },
-  scoreDotActive:  { backgroundColor: Colors.primary },
-  cardChevron:     { fontSize: 11, color: Colors.textMuted },
-  cardTitle:       { fontSize: 15, fontWeight: '700', color: Colors.primaryDark, marginBottom: 3 },
-  cardOrganisme:   { fontSize: 12, color: Colors.textMuted, marginBottom: 6 },
-  cardMontant:     { fontSize: 14, fontWeight: '600', color: Colors.primary },
-  cardBody:        { marginTop: 12 },
-  cardDivider:     { height: 1, backgroundColor: Colors.border, marginBottom: 14 },
-  cardSectionLabel:{ fontSize: 12, fontWeight: '700', color: Colors.primaryDark, marginBottom: 4, marginTop: 10 },
-  cardText:        { fontSize: 13, color: Colors.text, lineHeight: 19 },
-  cardTextEligible:{ color: Colors.primaryDark, backgroundColor: Colors.primaryBg, borderRadius: 8, padding: 10, overflow: 'hidden' },
-  cardLink:        { marginTop: 14, backgroundColor: Colors.primaryBg, borderRadius: 10, padding: 12, alignItems: 'center' },
-  cardLinkText:    { fontSize: 13, fontWeight: '700', color: Colors.primary },
+  // Card subvention
+  card: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  cardHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  catBadge:       { borderRadius: 20, paddingVertical: 3, paddingHorizontal: 10 },
+  catBadgeText:   { fontSize: 11, fontWeight: '700' },
+  scoreDots:      { flexDirection: 'row', gap: 3 },
+  scoreDot:       { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.border },
+  scoreDotActive: { backgroundColor: Colors.primary },
+  cardChevron:    { fontSize: 11, color: Colors.textMuted },
+  cardTitle:      { fontSize: 16, fontWeight: '700', color: Colors.primaryDark, marginBottom: 3 },
+  cardOrganisme:  { fontSize: 12, color: Colors.textMuted, marginBottom: 6 },
+  cardMontant:    { fontSize: 15, fontWeight: '700', color: Colors.primary },
+  cardBody:       { marginTop: 14 },
+  cardDivider:    { height: 1, backgroundColor: Colors.border, marginBottom: 14 },
+  cardSectionLabel:{ fontSize: 11, fontWeight: '700', color: Colors.primaryDark, marginBottom: 6, marginTop: 12, letterSpacing: 0.5, textTransform: 'uppercase' },
+  cardText:       { fontSize: 13, color: Colors.text, lineHeight: 20 },
+  eligibleBlock:  { backgroundColor: Colors.primaryBg, borderRadius: 10, padding: 12 },
+  cardTextEligible:{ fontSize: 13, color: Colors.primaryDark, lineHeight: 20 },
+  cardLink:       { marginTop: 14, backgroundColor: Colors.primaryBg, borderRadius: 12, padding: 13, alignItems: 'center' },
+  cardLinkText:   { fontSize: 14, fontWeight: '700', color: Colors.primary },
 });

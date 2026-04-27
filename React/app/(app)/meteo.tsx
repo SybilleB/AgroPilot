@@ -35,27 +35,27 @@ import {
 } from '@/services/meteo.service';
 import { Colors } from '@/constants/Colors';
 
-// ─── Types ────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Tab       = 'general' | 'pluie' | 'gel' | 'etp' | 'sol' | 'vent';
 type ChartMode = 'pluie' | 'gel' | 'etp';
 
-const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'general', label: 'Général', icon: '☀️' },
-  { key: 'pluie',   label: 'Pluie',   icon: '🌧️' },
-  { key: 'gel',     label: 'Gel',     icon: '❄️' },
-  { key: 'etp',     label: 'ETP',     icon: '💧' },
-  { key: 'sol',     label: 'Sol',     icon: '🌱' },
-  { key: 'vent',    label: 'Vent',    icon: '💨' },
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'general', label: 'Général'  },
+  { key: 'pluie',   label: 'Pluie'   },
+  { key: 'gel',     label: 'Gel'     },
+  { key: 'etp',     label: 'ETP'     },
+  { key: 'sol',     label: 'Sol'     },
+  { key: 'vent',    label: 'Vent'    },
 ];
 
 const CHART_MODES: { key: ChartMode; label: string }[] = [
-  { key: 'pluie', label: '🌧️ Pluie' },
-  { key: 'gel',   label: '❄️ Gel'   },
-  { key: 'etp',   label: '💧 ETP'   },
+  { key: 'pluie', label: 'Pluie' },
+  { key: 'gel',   label: 'Gel'   },
+  { key: 'etp',   label: 'ETP'   },
 ];
 
-// ─── Composant carte cross-platform ───────────────────────────────────────
+// ─── Composant carte cross-platform ───────────────────────────────────────────
 //
 //  • iOS / Android → WebView avec Leaflet + radar RainViewer animé
 //  • Web (Expo web) → iframe Windy embed (react-native-webview non supporté sur web)
@@ -68,7 +68,6 @@ function MeteoMap({ lat, lon, commune }: { lat: number; lon: number; commune: st
       `&menu=false&message=false&marker=true&calendar=false` +
       `&pressure=false&type=map&location=coordinates` +
       `&detail=false&metricWind=km%2Fh&metricTemp=%C2%B0C`;
-    // React.createElement évite les warnings TypeScript sur <iframe>
     return React.createElement('iframe', {
       src:   windyUrl,
       style: { width: '100%', height: '100%', border: 'none' },
@@ -95,10 +94,9 @@ function MeteoMap({ lat, lon, commune }: { lat: number; lon: number; commune: st
 
 const mapStyles = StyleSheet.create({ webview: { flex: 1 } });
 
-// ─── HTML de la carte interactive ─────────────────────────────────────────
+// ─── HTML de la carte interactive ─────────────────────────────────────────────
 
 function buildMapHtml(lat: number, lon: number, commune: string): string {
-  // Échappe les caractères dangereux avant injection dans le template HTML/JS
   const safeCommune = commune
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
@@ -115,7 +113,6 @@ function buildMapHtml(lat: number, lon: number, commune: string): string {
     html,body{width:100%;height:100%;background:#e8f0e9;}
     #map{width:100%;height:100%;}
 
-    /* Barre de calques en bas */
     #layerBar{
       position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
       z-index:1000;display:flex;gap:6px;
@@ -128,9 +125,8 @@ function buildMapHtml(lat: number, lon: number, commune: string): string {
       background:transparent;color:#555;transition:all .2s;
       white-space:nowrap;
     }
-    .lbtn.active{background:#2E7D32;color:#fff;}
+    .lbtn.active{background:#1A3A0F;color:#fff;}
 
-    /* Badge info en haut */
     #infoBadge{
       position:absolute;top:10px;left:10px;z-index:1000;
       background:rgba(255,255,255,0.95);border-radius:10px;
@@ -139,57 +135,50 @@ function buildMapHtml(lat: number, lon: number, commune: string): string {
       box-shadow:0 2px 8px rgba(0,0,0,0.15);
     }
 
-    /* Animation radar */
     #radarTime{
       position:absolute;top:10px;right:10px;z-index:1000;
-      background:rgba(46,125,50,0.92);color:#fff;
+      background:rgba(26,58,15,0.92);color:#fff;
       border-radius:8px;padding:5px 10px;font-size:11px;
       font-weight:700;display:none;
     }
 
-    /* Masquer attribution Leaflet (trop grande) */
     .leaflet-control-attribution{font-size:8px;}
   </style>
 </head>
 <body>
 <div id="map"></div>
 <div id="layerBar">
-  <button class="lbtn active" id="btn-radar"  onclick="setMode('radar')">🌧️ Radar</button>
-  <button class="lbtn"        id="btn-sat"    onclick="setMode('satellite')">🛰️ Satellite</button>
-  <button class="lbtn"        id="btn-topo"   onclick="setMode('topo')">🌾 Terrain</button>
+  <button class="lbtn active" id="btn-radar"  onclick="setMode('radar')">Radar</button>
+  <button class="lbtn"        id="btn-sat"    onclick="setMode('satellite')">Satellite</button>
+  <button class="lbtn"        id="btn-topo"   onclick="setMode('topo')">Terrain</button>
 </div>
-<div id="infoBadge">🌧️ Radar précipitations<br><span style="color:#888;font-size:10px">Animé · temps réel</span></div>
+<div id="infoBadge">Radar précipitations<br><span style="color:#888;font-size:10px">Animé · temps réel</span></div>
 <div id="radarTime"></div>
 
 <script>
 const LAT="${lat}", LON="${lon}", NAME="${safeCommune}";
 
-/* ── Carte ── */
 const map = L.map('map',{center:[LAT,LON],zoom:9,zoomControl:true});
 
-/* ── Calques de fond ── */
 const OSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OSM'});
 const SAT = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© ESRI'});
 const TOPO= L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© OpenTopoMap'});
 OSM.addTo(map);
 
-/* ── Marqueur exploitation ── */
 const farmIcon = L.divIcon({
-  html:'<div style="background:#2E7D32;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.4)">🚜</div>',
+  html:'<div style="background:#1A3A0F;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.4)">&#128664;</div>',
   className:'',iconSize:[36,36],iconAnchor:[18,18]
 });
 L.marker([LAT,LON],{icon:farmIcon}).addTo(map)
   .bindPopup('<b>'+NAME+'</b><br><span style="color:#666;font-size:12px">Mon exploitation</span>')
   .openPopup();
 
-/* ── Radar RainViewer (animé) ── */
 let radarLayers=[], frames=[], frameIdx=0, animTimer=null;
 
 async function loadRadar(){
   try{
     const r=await fetch('https://api.rainviewer.com/public/weather-maps.json');
     const d=await r.json();
-    /* 4 images passées + 2 nowcast */
     frames=[...d.radar.past.slice(-5),...(d.radar.nowcast||[]).slice(0,3)];
     preloadFrames();
   }catch(e){console.warn('radar err',e);}
@@ -213,7 +202,7 @@ function startAnim(){
     const ts=new Date(frames[frameIdx].time*1000);
     const label=ts.getHours().toString().padStart(2,'0')+':'+ts.getMinutes().toString().padStart(2,'0');
     const isPast=frameIdx<(frames.length-3);
-    document.getElementById('radarTime').textContent=(isPast?'⏪ ':' 🔮 ')+label;
+    document.getElementById('radarTime').textContent=(isPast?'Passé ':' Prévu ')+label;
     frameIdx=(frameIdx+1)%radarLayers.length;
   },700);
 }
@@ -225,26 +214,22 @@ function stopRadar(){
   document.getElementById('radarTime').style.display='none';
 }
 
-/* ── Switch calques ── */
 const infos={
-  radar :'🌧️ Radar précipitations<br><span style="color:#888;font-size:10px">Animé · temps réel</span>',
-  satellite:'🛰️ Imagerie satellite<br><span style="color:#888;font-size:10px">Visualisez vos parcelles</span>',
-  topo  :'🌾 Relief & topographie<br><span style="color:#888;font-size:10px">Drainage · exposition</span>',
+  radar    :'Radar précipitations<br><span style="color:#888;font-size:10px">Animé · temps réel</span>',
+  satellite:'Imagerie satellite<br><span style="color:#888;font-size:10px">Visualisez vos parcelles</span>',
+  topo     :'Relief & topographie<br><span style="color:#888;font-size:10px">Drainage · exposition</span>',
 };
 
 function setMode(mode){
-  /* Boutons */
   document.querySelectorAll('.lbtn').forEach(b=>b.classList.remove('active'));
   document.getElementById('btn-'+mode).classList.add('active');
   document.getElementById('infoBadge').innerHTML=infos[mode];
 
-  /* Fond */
   map.removeLayer(OSM);map.removeLayer(SAT);map.removeLayer(TOPO);
   if(mode==='satellite')SAT.addTo(map);
   else if(mode==='topo')TOPO.addTo(map);
   else OSM.addTo(map);
 
-  /* Radar */
   stopRadar();
   if(mode==='radar'){
     document.getElementById('radarTime').style.display='block';
@@ -258,7 +243,7 @@ setMode('radar');
 </html>`;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 function dayShort(d: string) { return JOURS[new Date(d + 'T12:00:00').getDay()]; }
@@ -273,13 +258,13 @@ function soilTrend(temps: number[]) { const h = Math.min(new Date().getHours(), 
 function windDirLabel(deg: number) { return ['N','NE','E','SE','S','SO','O','NO'][Math.round(deg / 45) % 8]; }
 function humidityLabel(h: number) { if (h < 30) return 'Air très sec'; if (h < 50) return 'Air sec'; if (h < 70) return 'Normal'; if (h < 85) return 'Humide'; return 'Très humide'; }
 function traitementOk(wind: number, gusts: number, precip: number) {
-  if (precip > 0.5) return { ok: false, reason: 'Pluie en cours', icon: '🌧️' };
-  if (gusts > 60)   return { ok: false, reason: 'Rafales > 60 km/h', icon: '💨' };
-  if (wind > 19)    return { ok: false, reason: 'Vent > 19 km/h', icon: '💨' };
-  return { ok: true, reason: 'Conditions favorables', icon: '✅' };
+  if (precip > 0.5) return { ok: false, reason: 'Pluie en cours — traitement impossible', icon: '🌧️' };
+  if (gusts > 60)   return { ok: false, reason: 'Rafales > 60 km/h — risque de dérive', icon: '💨' };
+  if (wind > 19)    return { ok: false, reason: 'Vent > 19 km/h — dérive trop importante', icon: '💨' };
+  return { ok: true, reason: 'Conditions favorables au traitement', icon: '✓' };
 }
 
-// ─── Graphique barres 7 jours ──────────────────────────────────────────────
+// ─── Graphique barres 7 jours ─────────────────────────────────────────────────
 
 function WeekChart({ daily, mode }: { daily: DailyForecast[]; mode: ChartMode }) {
   const vals = daily.map(d => mode === 'pluie' ? d.precipitationSum : mode === 'gel' ? d.tempMin : d.etp);
@@ -324,33 +309,31 @@ const cs = StyleSheet.create({
   unit:  { fontSize: 10, color: Colors.textPlaceholder, textAlign: 'right', marginTop: 4 },
 });
 
-// ─── Sub-composants ───────────────────────────────────────────────────────
+// ─── Sub-composants ───────────────────────────────────────────────────────────
 
-function Badge({ icon, value, label }: { icon: string; value: string; label: string }) {
+function MetricBox({ value, label }: { value: string; label: string }) {
   return (
-    <View style={s.badge}>
-      <Text style={s.badgeIcon}>{icon}</Text>
-      <Text style={s.badgeVal}>{value}</Text>
-      <Text style={s.badgeLbl}>{label}</Text>
+    <View style={s.metricBox}>
+      <Text style={s.metricVal}>{value}</Text>
+      <Text style={s.metricLbl}>{label}</Text>
     </View>
   );
 }
 
-function Card({ icon, title, value, sub, badge }: {
-  icon: string; title: string; value: string; sub?: string;
+function DataCard({ title, value, sub, badge }: {
+  title: string; value: string; sub?: string;
   badge?: { label: string; color: string };
 }) {
   return (
     <View style={s.card}>
       <View style={s.cardHead}>
-        <Text style={s.cardIcon}>{icon}</Text>
+        <Text style={s.cardTitle}>{title}</Text>
         {badge && (
           <View style={[s.cardBadge, { backgroundColor: badge.color + '22' }]}>
             <Text style={[s.cardBadgeTxt, { color: badge.color }]}>{badge.label}</Text>
           </View>
         )}
       </View>
-      <Text style={s.cardTitle}>{title}</Text>
       <Text style={s.cardVal}>{value}</Text>
       {sub ? <Text style={s.cardSub}>{sub}</Text> : null}
     </View>
@@ -362,7 +345,7 @@ function FRow({ day, isToday }: { day: DailyForecast; isToday: boolean }) {
     <View style={[s.fRow, day.isFrost && s.fFrost, isToday && s.fToday]}>
       <Text style={[s.fDay, isToday && s.fDayOn]}>{isToday ? 'Auj.' : dayShort(day.date)}</Text>
       <Text style={s.fEmoji}>{weatherCodeToEmoji(day.weatherCode)}</Text>
-      <View style={{ flex: 1 }}><Text style={s.fPrecip}>💧 {day.precipitationSum} mm</Text></View>
+      <View style={{ flex: 1 }}><Text style={s.fPrecip}>{day.precipitationSum} mm</Text></View>
       <Text style={s.fEtp}>ETP {day.etp}</Text>
       <View style={s.fTemps}>
         {day.isFrost && <Text style={{ fontSize: 11 }}>❄️</Text>}
@@ -374,7 +357,7 @@ function FRow({ day, isToday }: { day: DailyForecast; isToday: boolean }) {
   );
 }
 
-// ─── Écran ────────────────────────────────────────────────────────────────
+// ─── Écran principal ──────────────────────────────────────────────────────────
 
 export default function MeteoScreen() {
   const insets      = useSafeAreaInsets();
@@ -418,21 +401,33 @@ export default function MeteoScreen() {
 
   useEffect(() => { load(); }, [session]);
 
+  // ── Écran de chargement ───────────────────────────────────────────────────
   if (loading) return (
-    <View style={[s.centered, { paddingTop: insets.top }]}>
-      <ActivityIndicator size="large" color={Colors.primary} />
-      <Text style={s.loadTxt}>Chargement de la météo…</Text>
+    <View style={s.loadScreen}>
+      <View style={[s.loadHeader, { paddingTop: insets.top + 24 }]}>
+        <Text style={s.loadHeaderTitle}>Météo agricole</Text>
+        <Text style={s.loadHeaderSub}>Chargement des données en cours…</Text>
+      </View>
+      <View style={s.loadBody}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={s.loadTxt}>Localisation de votre exploitation</Text>
+      </View>
     </View>
   );
 
+  // ── Écran d'erreur ────────────────────────────────────────────────────────
   if (error || !meteo) return (
-    <View style={[s.centered, { paddingTop: insets.top }]}>
-      <Text style={{ fontSize: 48 }}>🌧️</Text>
-      <Text style={s.errTitle}>Météo indisponible</Text>
-      <Text style={s.errTxt}>{error ?? 'Données introuvables.'}</Text>
-      <TouchableOpacity style={s.retryBtn} onPress={() => load()}>
-        <Text style={s.retryTxt}>Réessayer</Text>
-      </TouchableOpacity>
+    <View style={s.loadScreen}>
+      <View style={[s.loadHeader, { paddingTop: insets.top + 24 }]}>
+        <Text style={s.loadHeaderTitle}>Météo agricole</Text>
+      </View>
+      <View style={s.loadBody}>
+        <Text style={s.errTitle}>Données indisponibles</Text>
+        <Text style={s.errTxt}>{error ?? 'Impossible de charger les données météo.'}</Text>
+        <TouchableOpacity style={s.retryBtn} onPress={() => load()}>
+          <Text style={s.retryTxt}>Réessayer</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -451,67 +446,75 @@ export default function MeteoScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={Colors.primary} />}
       showsVerticalScrollIndicator={false}
     >
-      {/* ─── HEADER ──────────────────────────────────────────────── */}
-      <View style={[s.header, { paddingTop: insets.top + 20 }]}>
-        <View style={s.hLeft}>
-          <Text style={{ fontSize: 20 }}>📍</Text>
+
+      {/* ─── HEADER ──────────────────────────────────────────────────────── */}
+      <View style={[s.header, { paddingTop: insets.top + 22 }]}>
+        <View style={s.headerTop}>
           <View>
-            <Text style={s.hName}>{commune}</Text>
-            <Text style={s.hSub}>{coords?.label ?? ''}</Text>
+            <Text style={s.hCommune}>{commune}</Text>
+            <Text style={s.hLabel}>{coords?.label ?? 'Météo agricole'}</Text>
+          </View>
+          <View style={s.hTempBlock}>
+            <Text style={s.hTempBig}>{current.temp}°</Text>
+            <Text style={s.hWeatherLabel}>{weatherCodeToLabel(current.weatherCode)}</Text>
           </View>
         </View>
-        <View style={s.hRight}>
-          <Text style={s.tempBig}>{current.temp}°</Text>
-          <Text style={{ fontSize: 24 }}>{weatherCodeToEmoji(current.weatherCode)}</Text>
+
+        {/* Métriques rapides */}
+        <View style={s.metricsRow}>
+          <MetricBox value={`${current.humidity}%`}        label="Humidité"  />
+          <View style={s.metricDivider} />
+          <MetricBox value={`${current.windSpeed} km/h`}   label="Vent"      />
+          <View style={s.metricDivider} />
+          <MetricBox value={`UV ${current.uvIndex}`}        label="UV"        />
+          <View style={s.metricDivider} />
+          <MetricBox value={`${current.apparent}°`}        label="Ressenti"  />
         </View>
       </View>
 
-      {/* ─── STRIP ───────────────────────────────────────────────── */}
-      <View style={s.strip}>
-        <Badge icon="💧" value={`${current.humidity}%`}      label="Humidité" />
-        <Badge icon="💨" value={`${current.windSpeed} km/h`} label="Vent"     />
-        <Badge icon="☀️" value={`UV ${current.uvIndex}`}     label="UV"       />
-        <Badge icon="🌡️" value={`${current.apparent}°`}      label="Ressenti" />
-      </View>
-
-      {/* ─── ALERTE GEL ──────────────────────────────────────────── */}
+      {/* ─── ALERTE GEL ──────────────────────────────────────────────────── */}
       {frostDays.length > 0 && (
         <View style={s.frostAlert}>
+          <Text style={s.frostIcon}>❄️</Text>
           <Text style={s.frostAlertTxt}>
-            ❄️ Gel prévu : {frostDays.map(d => dayShort(d.date)).join(', ')} — protégez vos cultures
+            Gel prévu : {frostDays.map(d => dayShort(d.date)).join(', ')} — protégez vos cultures sensibles
           </Text>
         </View>
       )}
 
-      {/* ─── CARTE INTERACTIVE ───────────────────────────────────── */}
+      {/* ─── CARTE INTERACTIVE ───────────────────────────────────────────── */}
       {coords && (
         <View style={s.mapContainer}>
           <MeteoMap lat={coords.lat} lon={coords.lon} commune={commune} />
         </View>
       )}
 
-      {/* ─── DÉCISION TRAITEMENT ─────────────────────────────────── */}
-      <View style={[s.dec, dec.ok ? s.decOk : s.decNok]}>
-        <View style={s.decLeft}>
-          <Text style={{ fontSize: 28 }}>{dec.icon}</Text>
-          <View>
-            <Text style={[s.decTitle, { color: dec.ok ? Colors.primaryDark : Colors.errorDark }]}>
-              {dec.ok ? 'Traitement possible' : 'Traitement déconseillé'}
-            </Text>
-            <Text style={s.decReason}>{dec.reason}</Text>
+      {/* ─── DÉCISION TRAITEMENT ─────────────────────────────────────────── */}
+      <View style={s.sectionPad}>
+        <Text style={s.sectionLabel}>TRAITEMENT PHYTOSANITAIRE</Text>
+        <View style={[s.dec, dec.ok ? s.decOk : s.decNok]}>
+          <View style={s.decLeft}>
+            <View style={[s.decIconBox, { backgroundColor: dec.ok ? Colors.successBg : Colors.errorBg }]}>
+              <Text style={s.decIcon}>{dec.icon}</Text>
+            </View>
+            <View>
+              <Text style={[s.decTitle, { color: dec.ok ? Colors.success : Colors.errorDark }]}>
+                {dec.ok ? 'Traitement possible' : 'Traitement déconseillé'}
+              </Text>
+              <Text style={s.decReason}>{dec.reason}</Text>
+            </View>
           </View>
-        </View>
-        <View style={s.decRight}>
-          <Text style={s.decWindVal}>{current.windSpeed}</Text>
-          <Text style={s.decWindUnit}>km/h</Text>
-          <Text style={s.decWindLbl}>Vent</Text>
+          <View style={s.decRight}>
+            <Text style={s.decWindVal}>{current.windSpeed}</Text>
+            <Text style={s.decWindUnit}>km/h</Text>
+          </View>
         </View>
       </View>
 
-      {/* ─── GRAPHIQUE 7 JOURS ───────────────────────────────────── */}
-      <View style={s.chartCard}>
-        <View style={s.chartHead}>
-          <Text style={s.chartTitle}>Vue 7 jours</Text>
+      {/* ─── GRAPHIQUE 7 JOURS ───────────────────────────────────────────── */}
+      <View style={s.sectionPad}>
+        <Text style={s.sectionLabel}>VUE 7 JOURS</Text>
+        <View style={s.chartCard}>
           <View style={s.chartToggles}>
             {CHART_MODES.map(m => (
               <TouchableOpacity
@@ -523,187 +526,202 @@ export default function MeteoScreen() {
               </TouchableOpacity>
             ))}
           </View>
-        </View>
-        <WeekChart daily={daily} mode={chartMode} />
-        <View style={s.chartSum}>
-          {chartMode === 'pluie' && <>
-            <Text style={s.csi}>💧 Total : <Text style={s.csv}>{totalPrecip(daily)} mm</Text></Text>
-            <Text style={s.csi}>📍 Max : <Text style={s.csv}>{maxPrecipDay(daily)}</Text></Text>
-          </>}
-          {chartMode === 'gel' && <>
-            <Text style={s.csi}>🌡️ Nuit + froide : <Text style={s.csv}>{coldestNight(daily)}</Text></Text>
-            <Text style={s.csi}>❄️ Jours gel : <Text style={s.csv}>{frostDays.length} / 7</Text></Text>
-          </>}
-          {chartMode === 'etp' && <>
-            <Text style={s.csi}>💧 ETP totale : <Text style={s.csv}>{totalEtp(daily)} mm</Text></Text>
-            <Text style={s.csi}>🌿 Bilan : <Text style={s.csv}>{bilanHydrique(daily)}</Text></Text>
-          </>}
+          <WeekChart daily={daily} mode={chartMode} />
+          <View style={s.chartSum}>
+            {chartMode === 'pluie' && <>
+              <Text style={s.csi}>Total : <Text style={s.csv}>{totalPrecip(daily)} mm</Text></Text>
+              <Text style={s.csi}>Jour max : <Text style={s.csv}>{maxPrecipDay(daily)}</Text></Text>
+            </>}
+            {chartMode === 'gel' && <>
+              <Text style={s.csi}>Nuit la + froide : <Text style={s.csv}>{coldestNight(daily)}</Text></Text>
+              <Text style={s.csi}>Jours de gel : <Text style={s.csv}>{frostDays.length} / 7</Text></Text>
+            </>}
+            {chartMode === 'etp' && <>
+              <Text style={s.csi}>ETP totale : <Text style={s.csv}>{totalEtp(daily)} mm</Text></Text>
+              <Text style={s.csi}>Bilan : <Text style={s.csv}>{bilanHydrique(daily)}</Text></Text>
+            </>}
+          </View>
         </View>
       </View>
 
-      {/* ─── ONGLETS ─────────────────────────────────────────────── */}
+      {/* ─── ONGLETS ─────────────────────────────────────────────────────── */}
+      <View style={s.sectionPad}>
+        <Text style={s.sectionLabel}>DONNÉES DÉTAILLÉES</Text>
+      </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}
         style={s.tabsScroll} contentContainerStyle={s.tabsCont}>
         {TABS.map(t => (
           <TouchableOpacity key={t.key}
             style={[s.tabBtn, tab === t.key && s.tabBtnOn]}
             onPress={() => setTab(t.key)}>
-            <Text style={s.tabIcon}>{t.icon}</Text>
             <Text style={[s.tabTxt, tab === t.key && s.tabTxtOn]}>{t.label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* ─── CARDS ───────────────────────────────────────────────── */}
+      {/* ─── GRILLE CARDS ────────────────────────────────────────────────── */}
       <View style={s.grid}>
         {tab === 'general' && (<>
-          <Card icon="🌡️" title="Température"    value={`${current.temp}°C`}            sub={`Ressenti ${current.apparent}°C`} />
-          <Card icon="💧" title="Humidité"        value={`${current.humidity}%`}         sub={humidityLabel(current.humidity)} />
-          <Card icon="🌤️" title="Conditions"      value={weatherCodeToLabel(current.weatherCode)} sub={`UV ${current.uvIndex}`} />
-          <Card icon="🌧️" title="Précip. jour"    value={`${today.precipitationSum} mm`} sub={`${today.precipProbability}% probabilité`} />
+          <DataCard title="Température"    value={`${current.temp}°C`}             sub={`Ressenti ${current.apparent}°C`} />
+          <DataCard title="Humidité"       value={`${current.humidity}%`}          sub={humidityLabel(current.humidity)} />
+          <DataCard title="Conditions"     value={weatherCodeToLabel(current.weatherCode)} sub={`UV ${current.uvIndex}`} />
+          <DataCard title="Précip. du jour" value={`${today.precipitationSum} mm`} sub={`${today.precipProbability}% de probabilité`} />
         </>)}
         {tab === 'pluie' && (<>
-          <Card icon="🌧️" title="Aujourd'hui"     value={`${today.precipitationSum} mm`} sub={`${today.precipProbability}% probabilité`} />
-          <Card icon="📊" title="Cumul 7 jours"   value={`${totalPrecip(daily)} mm`}     sub="Total prévisionnel" />
-          <Card icon="💦" title="Jour le + pluvieux" value={maxPrecipDay(daily)}         sub="Précipitations max" />
-          <Card icon="🌦️" title="Jours de pluie"  value={`${daily.filter(d => d.precipitationSum > 1).length} / 7`} sub="Jours avec > 1 mm" />
+          <DataCard title="Aujourd'hui"       value={`${today.precipitationSum} mm`}  sub={`${today.precipProbability}% probabilité`} />
+          <DataCard title="Cumul 7 jours"     value={`${totalPrecip(daily)} mm`}      sub="Total prévisionnel" />
+          <DataCard title="Jour le + pluvieux" value={maxPrecipDay(daily)}            sub="Précipitations max" />
+          <DataCard title="Jours de pluie"    value={`${daily.filter(d => d.precipitationSum > 1).length} / 7`} sub="Jours avec > 1 mm" />
         </>)}
         {tab === 'gel' && (<>
-          <Card icon="❄️" title="Risque gel"
+          <DataCard title="Risque de gel"
             value={frostDays.length > 0 ? `${frostDays.length} jour(s)` : 'Aucun'}
             sub={frostDays.length > 0 ? frostDays.map(d => dayShort(d.date)).join(', ') : 'Pas de gel prévu'}
             badge={frostDays.length > 0 ? { label: 'Alerte', color: Colors.error } : { label: 'OK', color: Colors.primary }} />
-          <Card icon="🌡️" title="Nuit la + froide" value={coldestNight(daily)} sub="Cette semaine" />
-          <Card icon="🌡️" title="Min absolu 7j"   value={`${Math.min(...daily.map(d => d.tempMin))}°C`} sub="Température minimale" />
-          <Card icon="🌡️" title="Max absolu 7j"   value={`${Math.max(...daily.map(d => d.tempMax))}°C`} sub="Température maximale" />
+          <DataCard title="Nuit la + froide"  value={coldestNight(daily)} sub="Cette semaine" />
+          <DataCard title="Min absolu 7j"     value={`${Math.min(...daily.map(d => d.tempMin))}°C`} sub="Température minimale" />
+          <DataCard title="Max absolu 7j"     value={`${Math.max(...daily.map(d => d.tempMax))}°C`} sub="Température maximale" />
         </>)}
         {tab === 'etp' && (<>
-          <Card icon="💧" title="ETP aujourd'hui" value={`${today.etp} mm/j`} sub={etpLabel(today.etp)}
+          <DataCard title="ETP aujourd'hui" value={`${today.etp} mm/j`} sub={etpLabel(today.etp)}
             badge={today.etp > 4 ? { label: 'Irriguer', color: '#1565C0' } : undefined} />
-          <Card icon="📊" title="ETP 7 jours"     value={`${totalEtp(daily)} mm`}    sub="Besoin cumulé" />
-          <Card icon="🌿" title="Bilan hydrique"  value={bilanHydrique(daily)}        sub="Précip. − ETP" />
-          <Card icon="⏱️" title="Pic d'ETP"        value={peakEtp(daily)}             sub="Jour le plus exigeant" />
+          <DataCard title="ETP 7 jours"    value={`${totalEtp(daily)} mm`}    sub="Besoin cumulé" />
+          <DataCard title="Bilan hydrique" value={bilanHydrique(daily)}        sub="Précip. − ETP" />
+          <DataCard title="Pic ETP"         value={peakEtp(daily)}             sub="Jour le plus exigeant" />
         </>)}
         {tab === 'sol' && (<>
-          <Card icon="🌱" title="Sol superficiel" value={`${Math.round(soilNow)}°C`}  sub="Température à 6 cm"
+          <DataCard title="Sol superficiel" value={`${Math.round(soilNow)}°C`}  sub="Température à 6 cm"
             badge={soilNow >= 8 ? { label: 'Semis OK', color: Colors.primary } : { label: 'Trop froid', color: Colors.warning }} />
-          <Card icon="🪱" title="Sol profond"     value={`${Math.round(soilDeep)}°C`} sub="Température à 18 cm" />
-          <Card icon="📈" title="Tendance sol"    value={soilTrend(hourly.soilTemp6cm)} sub="Évolution depuis ce matin" />
-          <Card icon="🌾" title="Conditions"
+          <DataCard title="Sol profond"     value={`${Math.round(soilDeep)}°C`} sub="Température à 18 cm" />
+          <DataCard title="Tendance sol"    value={soilTrend(hourly.soilTemp6cm)} sub="Évolution depuis ce matin" />
+          <DataCard title="Conditions"
             value={soilNow >= 10 ? 'Favorables' : soilNow >= 5 ? 'Correctes' : 'Défavorables'}
             sub="Développement racinaire" />
         </>)}
         {tab === 'vent' && (<>
-          <Card icon="💨" title="Vent moyen"      value={`${current.windSpeed} km/h`}  sub={`Direction : ${windDirLabel(current.windDirection)}`} />
-          <Card icon="🌬️" title="Rafales"          value={`${current.windGusts} km/h`}
+          <DataCard title="Vent moyen"     value={`${current.windSpeed} km/h`}  sub={`Direction : ${windDirLabel(current.windDirection)}`} />
+          <DataCard title="Rafales"        value={`${current.windGusts} km/h`}
             sub={current.windGusts > 60 ? 'Risque pour traitements' : 'Traitements possibles'}
             badge={current.windGusts > 60 ? { label: 'Alerte', color: Colors.error } : undefined} />
-          <Card icon="📅" title="Rafales max 7j"  value={`${Math.max(...daily.map(d => d.windGusts))} km/h`} sub="Maximum cette semaine" />
-          <Card icon="🚜" title="Traitement phyto"
+          <DataCard title="Rafales max 7j" value={`${Math.max(...daily.map(d => d.windGusts))} km/h`} sub="Maximum cette semaine" />
+          <DataCard title="Traitement"
             value={current.windSpeed < 19 ? 'Favorable' : 'Déconseillé'}
-            sub={current.windSpeed < 19 ? '< 19 km/h — dérive faible' : '≥ 19 km/h — risque dérive'}
+            sub={current.windSpeed < 19 ? '< 19 km/h — dérive faible' : '>= 19 km/h — risque dérive'}
             badge={current.windSpeed < 19 ? { label: 'OK', color: Colors.primary } : { label: 'Stop', color: Colors.error }} />
         </>)}
       </View>
 
-      {/* ─── PRÉVISIONS 7 JOURS ──────────────────────────────────── */}
-      <View style={s.section}>
-        <Text style={s.sectionTitle}>Prévisions détaillées</Text>
+      {/* ─── PRÉVISIONS 7 JOURS ──────────────────────────────────────────── */}
+      <View style={s.sectionPad}>
+        <Text style={s.sectionLabel}>PRÉVISIONS DÉTAILLÉES</Text>
         <View style={{ gap: 6 }}>
           {daily.map((d, i) => <FRow key={d.date} day={d} isToday={i === 0} />)}
         </View>
       </View>
 
-      <Text style={s.footer}>📡 Open-Meteo · RainViewer · ESRI · data.gouv.fr</Text>
+      <Text style={s.footer}>Open-Meteo · RainViewer · ESRI · data.gouv.fr</Text>
     </ScrollView>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   screen:  { flex: 1, backgroundColor: Colors.background },
-  centered:{ flex: 1, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 },
-  loadTxt: { fontSize: 14, color: Colors.textMuted, marginTop: 8 },
-  errTitle:{ fontSize: 20, fontWeight: '700', color: Colors.primaryDark, textAlign: 'center' },
-  errTxt:  { fontSize: 13, color: Colors.textMuted, textAlign: 'center', lineHeight: 20 },
-  retryBtn:{ marginTop: 8, backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 28 },
-  retryTxt:{ color: '#fff', fontSize: 15, fontWeight: '600' },
+
+  // Loading / error screens
+  loadScreen:     { flex: 1, backgroundColor: Colors.background },
+  loadHeader:     { backgroundColor: Colors.headerBg, paddingHorizontal: 22, paddingBottom: 32, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, gap: 8 },
+  loadHeaderTitle:{ fontSize: 22, fontWeight: '800', color: '#fff' },
+  loadHeaderSub:  { fontSize: 13, color: Colors.headerTextMuted },
+  loadBody:       { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, paddingHorizontal: 32 },
+  loadTxt:        { fontSize: 14, color: Colors.textMuted },
+  errTitle:       { fontSize: 20, fontWeight: '700', color: Colors.primaryDark, textAlign: 'center' },
+  errTxt:         { fontSize: 13, color: Colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  retryBtn:       { marginTop: 4, backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 28 },
+  retryTxt:       { color: '#fff', fontSize: 15, fontWeight: '600' },
 
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 16, backgroundColor: Colors.primaryDark },
-  hLeft:  { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  hName:  { fontSize: 17, fontWeight: '700', color: '#fff' },
-  hSub:   { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 1 },
-  hRight: { alignItems: 'flex-end', gap: 2 },
-  tempBig:{ fontSize: 42, fontWeight: '800', color: '#fff', lineHeight: 48 },
+  header: {
+    backgroundColor: Colors.headerBg,
+    paddingHorizontal: 22,
+    paddingBottom: 28,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    gap: 18,
+    marginBottom: 16,
+  },
+  headerTop:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  hCommune:    { fontSize: 20, fontWeight: '800', color: '#fff' },
+  hLabel:      { fontSize: 12, color: Colors.headerTextMuted, marginTop: 2 },
+  hTempBlock:  { alignItems: 'flex-end' },
+  hTempBig:    { fontSize: 44, fontWeight: '900', color: '#fff', lineHeight: 50 },
+  hWeatherLabel:{ fontSize: 12, color: Colors.headerTextMuted, textAlign: 'right', marginTop: 2 },
 
-  // Strip
-  strip:    { flexDirection: 'row', backgroundColor: Colors.primary, paddingVertical: 12, paddingHorizontal: 8 },
-  badge:    { flex: 1, alignItems: 'center', gap: 2 },
-  badgeIcon:{ fontSize: 16 },
-  badgeVal: { fontSize: 13, fontWeight: '700', color: '#fff' },
-  badgeLbl: { fontSize: 10, color: 'rgba(255,255,255,0.7)' },
+  // Métriques header
+  metricsRow:    { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 14, paddingVertical: 12 },
+  metricBox:     { flex: 1, alignItems: 'center' },
+  metricVal:     { fontSize: 14, fontWeight: '700', color: '#fff' },
+  metricLbl:     { fontSize: 10, color: Colors.headerTextMuted, marginTop: 2 },
+  metricDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', height: 24 },
 
-  // Frost
-  frostAlert:   { backgroundColor: '#E3F2FD', borderLeftWidth: 4, borderLeftColor: '#1565C0', marginHorizontal: 16, marginTop: 12, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 },
-  frostAlertTxt:{ fontSize: 13, color: '#0D47A1', lineHeight: 18 },
+  // Frost alert
+  frostAlert:   { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EEF4FF', borderLeftWidth: 4, borderLeftColor: '#1565C0', marginHorizontal: 16, marginBottom: 14, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12 },
+  frostIcon:    { fontSize: 16 },
+  frostAlertTxt:{ fontSize: 13, color: '#0D47A1', lineHeight: 18, flex: 1 },
 
   // Carte
-  mapContainer: { marginHorizontal: 16, marginTop: 14, borderRadius: 16, overflow: 'hidden', height: 420, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
+  mapContainer: { marginHorizontal: 16, marginBottom: 14, borderRadius: 16, overflow: 'hidden', height: 420, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
 
-  // Décision
-  dec:        { marginHorizontal: 16, marginTop: 14, borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  decOk:      { backgroundColor: Colors.successBg, borderLeftWidth: 4, borderLeftColor: Colors.primary },
-  decNok:     { backgroundColor: Colors.errorBg,   borderLeftWidth: 4, borderLeftColor: Colors.error },
-  decLeft:    { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  decTitle:   { fontSize: 15, fontWeight: '700' },
-  decReason:  { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
-  decRight:   { alignItems: 'center', minWidth: 52 },
-  decWindVal: { fontSize: 22, fontWeight: '800', color: Colors.primaryDark },
-  decWindUnit:{ fontSize: 11, color: Colors.textMuted, marginTop: -2 },
-  decWindLbl: { fontSize: 10, color: Colors.textMuted },
+  // Section
+  sectionPad:   { paddingHorizontal: 16, marginBottom: 14 },
+  sectionLabel: { fontSize: 10, fontWeight: '700', color: Colors.primary, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 },
+
+  // Décision traitement
+  dec:         { backgroundColor: Colors.white, borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  decOk:       { borderLeftWidth: 4, borderLeftColor: Colors.success },
+  decNok:      { borderLeftWidth: 4, borderLeftColor: Colors.error },
+  decLeft:     { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  decIconBox:  { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  decIcon:     { fontSize: 18 },
+  decTitle:    { fontSize: 15, fontWeight: '700' },
+  decReason:   { fontSize: 12, color: Colors.textMuted, marginTop: 2, lineHeight: 17 },
+  decRight:    { alignItems: 'center', minWidth: 52 },
+  decWindVal:  { fontSize: 24, fontWeight: '900', color: Colors.primaryDark },
+  decWindUnit: { fontSize: 11, color: Colors.textMuted, marginTop: -2 },
 
   // Chart
-  chartCard:    { marginHorizontal: 16, marginTop: 14, backgroundColor: Colors.white, borderRadius: 14, padding: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  chartHead:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  chartTitle:   { fontSize: 14, fontWeight: '700', color: Colors.primaryDark },
-  chartToggles: { flexDirection: 'row', gap: 5 },
-  ctBtn:        { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 12, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border },
-  ctBtnOn:      { backgroundColor: Colors.primaryBg, borderColor: Colors.primary },
-  ctTxt:        { fontSize: 11, color: Colors.textMuted, fontWeight: '500' },
-  ctTxtOn:      { color: Colors.primaryDark, fontWeight: '700' },
+  chartCard:    { backgroundColor: Colors.white, borderRadius: 14, padding: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  chartToggles: { flexDirection: 'row', gap: 6, marginBottom: 12 },
+  ctBtn:        { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border },
+  ctBtnOn:      { backgroundColor: Colors.headerBg, borderColor: Colors.headerBg },
+  ctTxt:        { fontSize: 12, color: Colors.textMuted, fontWeight: '500' },
+  ctTxtOn:      { color: '#fff', fontWeight: '700' },
   chartSum:     { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.border },
   csi:          { fontSize: 11, color: Colors.textMuted },
   csv:          { fontWeight: '700', color: Colors.primaryDark },
 
   // Tabs
-  tabsScroll: { marginTop: 16 },
-  tabsCont:   { paddingHorizontal: 12, gap: 8 },
-  tabBtn:     { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border },
-  tabBtnOn:   { backgroundColor: Colors.primaryBg, borderColor: Colors.primary },
-  tabIcon:    { fontSize: 14 },
-  tabTxt:     { fontSize: 13, fontWeight: '500', color: Colors.textMuted },
-  tabTxtOn:   { color: Colors.primaryDark, fontWeight: '700' },
+  tabsScroll: { marginBottom: 12 },
+  tabsCont:   { paddingHorizontal: 16, gap: 8 },
+  tabBtn:     { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border },
+  tabBtnOn:   { backgroundColor: Colors.headerBg, borderColor: Colors.headerBg },
+  tabTxt:     { fontSize: 13, fontWeight: '600', color: Colors.textMuted },
+  tabTxtOn:   { color: '#fff' },
 
   // Grid cards
-  grid:         { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, gap: 10, marginTop: 14 },
-  card:         { width: '47.5%', backgroundColor: Colors.white, borderRadius: 14, padding: 14, gap: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  cardHead:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  cardIcon:     { fontSize: 22 },
-  cardBadge:    { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
+  grid:         { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 10, marginBottom: 14 },
+  card:         { width: '47.5%', backgroundColor: Colors.white, borderRadius: 14, padding: 14, gap: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  cardHead:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  cardTitle:    { fontSize: 11, color: Colors.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, flex: 1 },
+  cardBadge:    { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   cardBadgeTxt: { fontSize: 10, fontWeight: '700' },
-  cardTitle:    { fontSize: 11, color: Colors.textMuted, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.4 },
-  cardVal:      { fontSize: 20, fontWeight: '800', color: Colors.primaryDark, marginTop: 2 },
+  cardVal:      { fontSize: 22, fontWeight: '800', color: Colors.primaryDark },
   cardSub:      { fontSize: 11, color: Colors.textMuted, lineHeight: 15, marginTop: 2 },
 
-  // Section
-  section:      { marginHorizontal: 16, marginTop: 20 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.primaryDark, marginBottom: 10 },
-
-  // Forecast
-  fRow:    { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, gap: 10, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 3, elevation: 1 },
-  fFrost:  { backgroundColor: '#E3F2FD', borderLeftWidth: 3, borderLeftColor: '#1565C0' },
+  // Forecast rows
+  fRow:    { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, gap: 10, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 3, elevation: 1 },
+  fFrost:  { backgroundColor: '#EEF4FF', borderLeftWidth: 3, borderLeftColor: '#1565C0' },
   fToday:  { backgroundColor: Colors.primaryBg, borderLeftWidth: 3, borderLeftColor: Colors.primary },
   fDay:    { width: 36, fontSize: 13, fontWeight: '600', color: Colors.textMuted },
   fDayOn:  { color: Colors.primaryDark },
@@ -715,5 +733,5 @@ const s = StyleSheet.create({
   fSep:    { fontSize: 13, color: Colors.textMuted },
   fMax:    { fontSize: 13, color: Colors.error, fontWeight: '600' },
 
-  footer: { textAlign: 'center', fontSize: 11, color: Colors.textPlaceholder, marginTop: 24, paddingHorizontal: 16 },
+  footer: { textAlign: 'center', fontSize: 10, color: Colors.textPlaceholder, marginTop: 12, paddingHorizontal: 16 },
 });

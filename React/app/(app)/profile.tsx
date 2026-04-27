@@ -6,8 +6,7 @@
  *  - Sécurité : changer l'email ou le mot de passe
  *  - Boutons : Modifier mon profil | Se déconnecter
  *
- * Logout : router.replace('/') est appelé explicitement après logout() pour iOS
- * (onAuthStateChange peut tarder). Le guard _layout.tsx reste en backup.
+ * Logout : le guard _layout.tsx gère la navigation après déconnexion.
  */
 import { useState } from 'react';
 import {
@@ -19,7 +18,6 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { logout, changeEmail, changePassword } from '@/services/auth.service';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/Colors';
@@ -28,17 +26,35 @@ import { Colors } from '@/constants/Colors';
 
 const TYPE_LABELS: Record<string, string> = {
   grandes_cultures: 'Grandes cultures', elevage_bovin: 'Élevage bovin',
-  elevage_porcin: 'Élevage porcin',     elevage_avicole: 'Élevage avicole',
-  viticulture: 'Viticulture',           maraichage: 'Maraîchage',
-  arboriculture: 'Arboriculture',       mixte: 'Mixte',
+  elevage_porcin:   'Élevage porcin',   elevage_avicole: 'Élevage avicole',
+  viticulture:      'Viticulture',      maraichage: 'Maraîchage',
+  arboriculture:    'Arboriculture',    mixte: 'Mixte',
 };
 
 const METHODE_LABELS: Record<string, string> = {
   conventionnelle: 'Conventionnelle', raisonnee: 'Raisonnée',
-  hve: 'HVE', bio: 'Agriculture biologique', biodynamie: 'Biodynamie',
+  hve:             'HVE',            bio: 'Agriculture biologique',
+  biodynamie:      'Biodynamie',
 };
 
-// ─── Composant ────────────────────────────────────────────────────────────────
+// ─── Ligne d'information ──────────────────────────────────────────────────────
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={rs.row}>
+      <Text style={rs.label}>{label}</Text>
+      <Text style={rs.value}>{value}</Text>
+    </View>
+  );
+}
+
+const rs = StyleSheet.create({
+  row:   { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  label: { fontSize: 13, color: Colors.textMuted, flex: 1 },
+  value: { fontSize: 13, color: Colors.text, fontWeight: '600', flex: 2, textAlign: 'right' },
+});
+
+// ─── Composant principal ──────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -50,36 +66,31 @@ export default function ProfileScreen() {
   const e       = fullProfile?.exploitation;
   const cultures = fullProfile?.cultures ?? [];
 
-  // ── Sécurité : état local ──────────────────────────────────────────────────
-  const [securityOpen, setSecurityOpen]   = useState<'email' | 'password' | null>(null);
+  const [securityOpen,  setSecurityOpen]  = useState<'email' | 'password' | null>(null);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
 
-  const [newEmail, setNewEmail]               = useState('');
-  const [emailLoading, setEmailLoading]       = useState(false);
-  const [emailMessage, setEmailMessage]       = useState('');
-  const [emailError, setEmailError]           = useState('');
+  const [newEmail,      setNewEmail]      = useState('');
+  const [emailLoading,  setEmailLoading]  = useState(false);
+  const [emailMessage,  setEmailMessage]  = useState('');
+  const [emailError,    setEmailError]    = useState('');
 
-  const [currentPwd, setCurrentPwd]           = useState('');
-  const [newPwd, setNewPwd]                   = useState('');
-  const [confirmPwd, setConfirmPwd]           = useState('');
-  const [pwdLoading, setPwdLoading]           = useState(false);
-  const [pwdMessage, setPwdMessage]           = useState('');
-  const [pwdError, setPwdError]               = useState('');
+  const [currentPwd,   setCurrentPwd]    = useState('');
+  const [newPwd,       setNewPwd]        = useState('');
+  const [confirmPwd,   setConfirmPwd]    = useState('');
+  const [pwdLoading,   setPwdLoading]    = useState(false);
+  const [pwdMessage,   setPwdMessage]    = useState('');
+  const [pwdError,     setPwdError]      = useState('');
 
-  // ── Handlers sécurité ─────────────────────────────────────────────────────
+  // ── Handlers ─────────────────────────────────────────────────────────────────
 
   const handleChangeEmail = async () => {
     setEmailError(''); setEmailMessage('');
     setEmailLoading(true);
     const result = await changeEmail(newEmail);
     setEmailLoading(false);
-    if (result.success) {
-      setEmailMessage(result.message ?? 'Email de confirmation envoyé.');
-      setNewEmail('');
-    } else {
-      setEmailError(result.error ?? 'Erreur.');
-    }
+    if (result.success) { setEmailMessage(result.message ?? 'Email de confirmation envoyé.'); setNewEmail(''); }
+    else setEmailError(result.error ?? 'Erreur.');
   };
 
   const handleChangePassword = async () => {
@@ -89,58 +100,90 @@ export default function ProfileScreen() {
     setPwdLoading(true);
     const result = await changePassword(user.email, currentPwd, newPwd);
     setPwdLoading(false);
-    if (result.success) {
-      setPwdMessage(result.message ?? 'Mot de passe mis à jour.');
-      setCurrentPwd(''); setNewPwd(''); setConfirmPwd('');
-    } else {
-      setPwdError(result.error ?? 'Erreur.');
-    }
+    if (result.success) { setPwdMessage(result.message ?? 'Mot de passe mis à jour.'); setCurrentPwd(''); setNewPwd(''); setConfirmPwd(''); }
+    else setPwdError(result.error ?? 'Erreur.');
   };
 
   const handleLogout = async () => {
     setLogoutLoading(true);
-    try {
-      await logout();
-      // Pas de navigation ici — le guard dans _layout.tsx s'en charge.
-      // Séquence :
-      //   1. signOut() → onAuthStateChange(SIGNED_OUT) → setSession(null)
-      //   2. React re-render avec session=null
-      //   3. Guard : !session && inProtected → router.replace('/(auth)/login')
-      // Si on navigue AVANT l'étape 2, le guard voit l'ancienne session et
-      // fait un rebond vers /(app).
-    } catch (_) {
-      setLogoutLoading(false);
-    }
+    try { await logout(); } catch (_) { setLogoutLoading(false); }
   };
 
-  // ── Rendu ─────────────────────────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────────────────────────
 
   if (loading) {
-    return <View style={styles.center}><Text style={styles.muted}>Chargement…</Text></View>;
+    return (
+      <View style={s.loadScreen}>
+        <View style={[s.header, { paddingTop: insets.top + 24 }]}>
+          <Text style={s.headerTitle}>Mon profil</Text>
+        </View>
+        <View style={s.center}>
+          <Text style={s.muted}>Chargement…</Text>
+        </View>
+      </View>
+    );
   }
 
-  return (
-    <ScrollView style={styles.root} contentContainerStyle={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]}>
+  // ── Rendu ─────────────────────────────────────────────────────────────────────
 
-      <View style={styles.header}>
-        <Text style={styles.title}>Mon profil</Text>
+  return (
+    <ScrollView
+      style={s.root}
+      contentContainerStyle={[s.container, { paddingBottom: insets.bottom + 32 }]}
+      showsVerticalScrollIndicator={false}
+    >
+
+      {/* ─── HEADER ─────────────────────────────────────────────────────── */}
+      <View style={[s.header, { paddingTop: insets.top + 24 }]}>
+        {/* Avatar initiales */}
+        <View style={s.avatarRow}>
+          <View style={s.avatar}>
+            <Text style={s.avatarText}>
+              {p?.prenom?.[0]?.toUpperCase() ?? '?'}{p?.nom?.[0]?.toUpperCase() ?? ''}
+            </Text>
+          </View>
+          <View>
+            <Text style={s.headerTitle}>{p ? `${p.prenom} ${p.nom}` : 'Mon profil'}</Text>
+            <Text style={s.headerSub}>{user?.email ?? ''}</Text>
+          </View>
+        </View>
+
+        {/* Synthèse exploitation */}
+        {e && (
+          <View style={s.exploitRow}>
+            <View style={s.exploitBox}>
+              <Text style={s.exploitVal}>{e.surface_ha ?? '—'}</Text>
+              <Text style={s.exploitLabel}>ha</Text>
+            </View>
+            <View style={s.exploitDivider} />
+            <View style={s.exploitBox}>
+              <Text style={s.exploitVal}>{cultures.length}</Text>
+              <Text style={s.exploitLabel}>cultures</Text>
+            </View>
+            <View style={s.exploitDivider} />
+            <View style={s.exploitBox}>
+              <Text style={s.exploitVal}>{e.commune ?? '—'}</Text>
+              <Text style={s.exploitLabel}>commune</Text>
+            </View>
+          </View>
+        )}
       </View>
 
-      {/* ── Identité ──────────────────────────────────────────────────────── */}
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>👤 Identité</Text>
-        <Row label="Nom"       value={p ? `${p.prenom} ${p.nom}` : '—'} />
-        <Row label="Email"     value={user?.email ?? '—'} />
+      {/* ─── IDENTITÉ ────────────────────────────────────────────────────── */}
+      <View style={s.sectionCard}>
+        <Text style={s.sectionTitle}>Identité</Text>
+        <Row label="Nom complet"   value={p ? `${p.prenom} ${p.nom}` : '—'} />
+        <Row label="Email"         value={user?.email ?? '—'} />
         {p?.phone              && <Row label="Téléphone"  value={p.phone} />}
-        <Row label="Naissance" value={p?.date_naissance ? p.date_naissance.split('-')[0] : '—'} />
-        <Row label="Situation" value={p?.situation_familiale ?? '—'} />
+        <Row label="Naissance"     value={p?.date_naissance ? p.date_naissance.split('-')[0] : '—'} />
+        <Row label="Situation"     value={p?.situation_familiale ?? '—'} />
         {p?.nb_enfants != null && <Row label="Enfants"    value={String(p.nb_enfants)} />}
-      </Card>
+      </View>
 
-      {/* ── Exploitation ──────────────────────────────────────────────────── */}
+      {/* ─── EXPLOITATION ────────────────────────────────────────────────── */}
       {e ? (
-        <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>🌾 Exploitation</Text>
+        <View style={s.sectionCard}>
+          <Text style={s.sectionTitle}>Exploitation</Text>
           {e.nom_exploitation   && <Row label="Nom"           value={e.nom_exploitation} />}
           {e.commune            && <Row label="Commune"       value={`${e.commune}${e.code_postal ? ` (${e.code_postal})` : ''}`} />}
           {e.departement        && <Row label="Département"   value={e.departement} />}
@@ -148,17 +191,21 @@ export default function ProfileScreen() {
           {e.type_exploitation  && <Row label="Type"          value={TYPE_LABELS[e.type_exploitation] ?? e.type_exploitation} />}
           {e.methode_production && <Row label="Méthode"       value={METHODE_LABELS[e.methode_production] ?? e.methode_production} />}
           {e.certifications?.length ? <Row label="Certifications" value={e.certifications.join(', ').toUpperCase()} /> : null}
-        </Card>
+        </View>
       ) : (
-        <Card style={styles.section}>
-          <Text style={styles.muted}>Exploitation non configurée</Text>
-        </Card>
+        <View style={s.sectionCard}>
+          <Text style={s.sectionTitle}>Exploitation</Text>
+          <Text style={s.muted}>Exploitation non configurée</Text>
+          <TouchableOpacity style={s.configBtn} onPress={() => router.push('/profile-setup')}>
+            <Text style={s.configBtnText}>Configurer mon exploitation</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
-      {/* ── Assolement ────────────────────────────────────────────────────── */}
+      {/* ─── ASSOLEMENT ──────────────────────────────────────────────────── */}
       {cultures.length > 0 && (
-        <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>🌱 Assolement</Text>
+        <View style={s.sectionCard}>
+          <Text style={s.sectionTitle}>Assolement</Text>
           {cultures.map((c, i) => (
             <Row
               key={i}
@@ -166,157 +213,151 @@ export default function ProfileScreen() {
               value={c.surface_ha ? `${c.surface_ha} ha` : '—'}
             />
           ))}
-        </Card>
+        </View>
       )}
 
-      {/* ── Sécurité ──────────────────────────────────────────────────────── */}
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>🔒 Sécurité</Text>
+      {/* ─── SÉCURITÉ ────────────────────────────────────────────────────── */}
+      <View style={s.sectionCard}>
+        <Text style={s.sectionTitle}>Sécurité du compte</Text>
 
         {/* Changer l'email */}
         <TouchableOpacity
-          style={styles.securityRow}
+          style={s.secRow}
           onPress={() => setSecurityOpen(securityOpen === 'email' ? null : 'email')}
         >
-          <Text style={styles.securityLabel}>Changer l'adresse email</Text>
-          <Text style={styles.securityChevron}>{securityOpen === 'email' ? '▲' : '▶'}</Text>
+          <Text style={s.secLabel}>Changer l'adresse email</Text>
+          <Text style={s.secChevron}>{securityOpen === 'email' ? '▲' : '›'}</Text>
         </TouchableOpacity>
 
         {securityOpen === 'email' && (
-          <View style={styles.securityForm}>
-            <Text style={styles.securityHint}>
-              Email actuel : <Text style={styles.securityHintBold}>{user?.email}</Text>
-              {`\n`}Supabase enverra un lien de confirmation à la nouvelle adresse.
+          <View style={s.secForm}>
+            <Text style={s.secHint}>
+              Email actuel : <Text style={s.secHintBold}>{user?.email}</Text>
+              {'\n'}Un lien de confirmation sera envoyé à la nouvelle adresse.
             </Text>
-            <Input
-              label="Nouvel email"
-              placeholder="nouveau@ferme.fr"
-              value={newEmail}
-              onChangeText={setNewEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {emailError  ? <Text style={styles.errorText}>⚠️ {emailError}</Text>   : null}
-            {emailMessage ? <Text style={styles.successText}>✅ {emailMessage}</Text> : null}
-            <Button onPress={handleChangeEmail} loading={emailLoading}>
-              Envoyer le lien de confirmation
-            </Button>
+            <Input label="Nouvel email" placeholder="nouveau@ferme.fr" value={newEmail} onChangeText={setNewEmail} keyboardType="email-address" autoCapitalize="none" />
+            {emailError   ? <Text style={s.errTxt}>{emailError}</Text>   : null}
+            {emailMessage ? <Text style={s.okTxt}>{emailMessage}</Text>  : null}
+            <Button onPress={handleChangeEmail} loading={emailLoading}>Envoyer le lien de confirmation</Button>
           </View>
         )}
 
-        <View style={styles.divider} />
+        <View style={s.divider} />
 
         {/* Changer le mot de passe */}
         <TouchableOpacity
-          style={styles.securityRow}
+          style={s.secRow}
           onPress={() => setSecurityOpen(securityOpen === 'password' ? null : 'password')}
         >
-          <Text style={styles.securityLabel}>Changer le mot de passe</Text>
-          <Text style={styles.securityChevron}>{securityOpen === 'password' ? '▲' : '▶'}</Text>
+          <Text style={s.secLabel}>Changer le mot de passe</Text>
+          <Text style={s.secChevron}>{securityOpen === 'password' ? '▲' : '›'}</Text>
         </TouchableOpacity>
 
         {securityOpen === 'password' && (
-          <View style={styles.securityForm}>
-            <Input
-              label="Mot de passe actuel"
-              placeholder="••••••••"
-              value={currentPwd}
-              onChangeText={setCurrentPwd}
-              secureTextEntry
-            />
-            <Input
-              label="Nouveau mot de passe"
-              placeholder="••••••••"
-              value={newPwd}
-              onChangeText={setNewPwd}
-              secureTextEntry
-            />
-            <Input
-              label="Confirmer le nouveau mot de passe"
-              placeholder="••••••••"
-              value={confirmPwd}
-              onChangeText={setConfirmPwd}
-              secureTextEntry
-            />
-            {pwdError   ? <Text style={styles.errorText}>⚠️ {pwdError}</Text>     : null}
-            {pwdMessage ? <Text style={styles.successText}>✅ {pwdMessage}</Text> : null}
-            <Button onPress={handleChangePassword} loading={pwdLoading}>
-              Mettre à jour le mot de passe
-            </Button>
+          <View style={s.secForm}>
+            <Input label="Mot de passe actuel"          placeholder="••••••••" value={currentPwd} onChangeText={setCurrentPwd} secureTextEntry />
+            <Input label="Nouveau mot de passe"         placeholder="••••••••" value={newPwd}     onChangeText={setNewPwd}     secureTextEntry />
+            <Input label="Confirmer le nouveau mot de passe" placeholder="••••••••" value={confirmPwd} onChangeText={setConfirmPwd} secureTextEntry />
+            {pwdError   ? <Text style={s.errTxt}>{pwdError}</Text>   : null}
+            {pwdMessage ? <Text style={s.okTxt}>{pwdMessage}</Text>  : null}
+            <Button onPress={handleChangePassword} loading={pwdLoading}>Mettre à jour le mot de passe</Button>
           </View>
         )}
-      </Card>
+      </View>
 
-      {/* ── Actions ───────────────────────────────────────────────────────── */}
-      <Button onPress={() => router.push('/profile-setup')} style={styles.editBtn}>
-        Modifier mon profil
-      </Button>
-
-      {logoutConfirm ? (
-        <View style={styles.logoutConfirmBox}>
-          <Text style={styles.logoutConfirmText}>Confirmer la déconnexion ?</Text>
-          <View style={styles.logoutConfirmRow}>
-            <Button onPress={() => setLogoutConfirm(false)} variant="outline" style={styles.logoutConfirmBtn}>
-              Annuler
-            </Button>
-            <Button onPress={handleLogout} variant="ghost" loading={logoutLoading} style={styles.logoutConfirmBtn}>
-              Se déconnecter
-            </Button>
-          </View>
-        </View>
-      ) : (
-        <Button onPress={() => setLogoutConfirm(true)} variant="ghost" style={styles.logoutBtn}>
-          Se déconnecter
+      {/* ─── ACTIONS ─────────────────────────────────────────────────────── */}
+      <View style={s.actionsBlock}>
+        <Button onPress={() => router.push('/profile-setup')}>
+          Modifier mon profil
         </Button>
-      )}
+
+        {logoutConfirm ? (
+          <View style={s.logoutConfirm}>
+            <Text style={s.logoutConfirmText}>Confirmer la déconnexion ?</Text>
+            <View style={s.logoutConfirmRow}>
+              <Button onPress={() => setLogoutConfirm(false)} variant="outline" style={s.halfBtn}>Annuler</Button>
+              <Button onPress={handleLogout} variant="ghost" loading={logoutLoading} style={s.halfBtn}>Se déconnecter</Button>
+            </View>
+          </View>
+        ) : (
+          <Button onPress={() => setLogoutConfirm(true)} variant="ghost">
+            Se déconnecter
+          </Button>
+        )}
+      </View>
 
     </ScrollView>
   );
 }
 
-// ─── Composant utilitaire ─────────────────────────────────────────────────────
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={rowStyles.row}>
-      <Text style={rowStyles.label}>{label}</Text>
-      <Text style={rowStyles.value}>{value}</Text>
-    </View>
-  );
-}
-
-const rowStyles = StyleSheet.create({
-  row:   { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  label: { fontSize: 13, color: Colors.textMuted, flex: 1 },
-  value: { fontSize: 13, color: Colors.text, fontWeight: '500', flex: 2, textAlign: 'right' },
-});
-
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  root:         { flex: 1, backgroundColor: Colors.white },
-  container:    { paddingHorizontal: 20 },
-  center:       { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header:       { marginBottom: 20 },
-  title:        { fontSize: 26, fontWeight: '800', color: Colors.primaryDark },
-  section:      { marginBottom: 16 },
-  sectionTitle: { fontSize: 14, fontWeight: '700', color: Colors.primaryDark, marginBottom: 10 },
-  muted:        { fontSize: 14, color: Colors.textMuted, textAlign: 'center', paddingVertical: 8 },
-  // Sécurité
-  securityRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 },
-  securityLabel:   { fontSize: 14, color: Colors.text, fontWeight: '500' },
-  securityChevron: { fontSize: 12, color: Colors.textMuted },
-  securityForm:    { paddingTop: 12, gap: 0 },
-  securityHint:    { fontSize: 12, color: Colors.textMuted, lineHeight: 18, marginBottom: 12 },
-  securityHintBold:{ fontWeight: '600', color: Colors.text },
-  divider:         { height: 1, backgroundColor: Colors.border, marginVertical: 4 },
-  errorText:       { fontSize: 13, color: Colors.error, marginBottom: 8 },
-  successText:     { fontSize: 13, color: Colors.success, marginBottom: 8, lineHeight: 18 },
+const s = StyleSheet.create({
+  root:      { flex: 1, backgroundColor: Colors.background },
+  container: { paddingHorizontal: 0 },
+  loadScreen:{ flex: 1, backgroundColor: Colors.background },
+  center:    { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
+  muted:     { fontSize: 14, color: Colors.textMuted, textAlign: 'center', paddingVertical: 8 },
+
+  // Header
+  header: {
+    backgroundColor: Colors.headerBg,
+    paddingHorizontal: 22,
+    paddingBottom: 32,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    gap: 18,
+    marginBottom: 22,
+  },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: '#fff' },
+  headerSub:   { fontSize: 12, color: Colors.headerTextMuted, marginTop: 2 },
+
+  // Avatar
+  avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  avatar:    { width: 54, height: 54, borderRadius: 27, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  avatarText:{ fontSize: 20, fontWeight: '800', color: '#fff' },
+
+  // Exploit summary
+  exploitRow:    { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 14, paddingVertical: 14 },
+  exploitBox:    { flex: 1, alignItems: 'center' },
+  exploitVal:    { fontSize: 15, fontWeight: '800', color: '#fff' },
+  exploitLabel:  { fontSize: 10, color: Colors.headerTextMuted, marginTop: 2 },
+  exploitDivider:{ width: 1, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', height: 24 },
+
+  // Section cards
+  sectionCard: {
+    marginHorizontal: 22,
+    marginBottom: 14,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  sectionTitle:{ fontSize: 11, fontWeight: '700', color: Colors.primaryDark, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  // Config btn
+  configBtn:    { marginTop: 14, backgroundColor: Colors.primaryBg, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  configBtnText:{ color: Colors.primary, fontSize: 14, fontWeight: '700' },
+
+  // Security
+  secRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11 },
+  secLabel:   { fontSize: 14, color: Colors.text, fontWeight: '500' },
+  secChevron: { fontSize: 16, color: Colors.textMuted },
+  secForm:    { paddingTop: 14, gap: 4 },
+  secHint:    { fontSize: 12, color: Colors.textMuted, lineHeight: 18, marginBottom: 12 },
+  secHintBold:{ fontWeight: '600', color: Colors.text },
+  divider:    { height: 1, backgroundColor: Colors.border, marginVertical: 2 },
+  errTxt:     { fontSize: 13, color: Colors.error, marginBottom: 6 },
+  okTxt:      { fontSize: 13, color: Colors.success, marginBottom: 6, lineHeight: 18 },
+
   // Actions
-  editBtn:            { marginTop: 8 },
-  logoutBtn:          { marginTop: 8 },
-  logoutConfirmBox:   { marginTop: 16, backgroundColor: Colors.errorBg, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#FFCDD2' },
-  logoutConfirmText:  { fontSize: 14, fontWeight: '600', color: Colors.errorDark, textAlign: 'center', marginBottom: 12 },
-  logoutConfirmRow:   { flexDirection: 'row', gap: 8 },
-  logoutConfirmBtn:   { flex: 1 },
+  actionsBlock:    { paddingHorizontal: 22, gap: 10, marginTop: 4 },
+  logoutConfirm:   { backgroundColor: Colors.errorBg, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#FFCDD2', gap: 12 },
+  logoutConfirmText:{ fontSize: 14, fontWeight: '600', color: Colors.errorDark, textAlign: 'center' },
+  logoutConfirmRow: { flexDirection: 'row', gap: 8 },
+  halfBtn:          { flex: 1 },
 });
