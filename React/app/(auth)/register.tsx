@@ -11,11 +11,10 @@ import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/Colors';
 
 export default function RegisterScreen() {
+  // ⚠️ TOUS les hooks AVANT tout return conditionnel (Rules of Hooks)
   const { session } = useAuth();
   const router = useRouter();
   const [prenom, setPrenom]                   = useState('');
-
-  if (session) return <Redirect href="/(app)" />;
   const [nom, setNom]                         = useState('');
   const [email, setEmail]                     = useState('');
   const [password, setPassword]               = useState('');
@@ -23,6 +22,8 @@ export default function RegisterScreen() {
   const [loading, setLoading]                 = useState(false);
   const [error, setError]                     = useState('');
   const [success, setSuccess]                 = useState(false);
+
+  if (session) return <Redirect href="/(app)" />;
 
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
