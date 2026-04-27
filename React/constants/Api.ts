@@ -1,7 +1,7 @@
-import { Platform } from 'react-native';
+﻿import { Platform } from 'react-native';
 
 function resolveApiUrl(): string {
-  return 'http://192.168.1.16:8000'; // Remplace par l'IP de ton serveur local (carte réseau de ton PC sur le meme réseau que ton téléphone)
+  return 'http://192.168.1.16:8000'; // Remplace par l'IP de ton serveur local (carte rÃ©seau de ton PC sur le meme rÃ©seau que ton tÃ©lÃ©phone)
 }
 
 export const API_BASE_URL = resolveApiUrl();
