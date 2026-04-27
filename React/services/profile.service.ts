@@ -2,12 +2,13 @@
  * services/profile.service.ts — CRUD profil, exploitation, cultures
  */
 import { supabase } from '@/services/supabase';
-import { Profile, Exploitation, CultureExploitation, TypeCulture } from '@/types/index';
+import { Profile, Exploitation, CultureExploitation, HistoriqueCulture, TypeCulture } from '@/types/index';
 
 export interface FullProfile {
   profile: Profile;
   exploitation: Exploitation | null;
   cultures: CultureExploitation[];
+  historique: HistoriqueCulture[];
 }
 
 /** Charge le profil complet d'un utilisateur (profil + exploitation + cultures) */
@@ -27,15 +28,23 @@ export async function getFullProfile(userId: string): Promise<FullProfile | null
     .maybeSingle();
 
   let cultures: CultureExploitation[] = [];
+  let historique: HistoriqueCulture[] = [];
   if (exploitation?.id) {
-    const { data } = await supabase
+    const { data: culturesData } = await supabase
       .from('cultures_exploitation')
       .select('*')
       .eq('exploitation_id', exploitation.id);
-    cultures = data ?? [];
+    cultures = culturesData ?? [];
+
+    const { data: historiqueData } = await supabase
+      .from('historique_cultures')
+      .select('*')
+      .eq('exploitation_id', exploitation.id)
+      .order('annee', { ascending: false });
+    historique = historiqueData ?? [];
   }
 
-  return { profile, exploitation: exploitation ?? null, cultures };
+  return { profile, exploitation: exploitation ?? null, cultures, historique };
 }
 
 /** Étape 1 du wizard : situation personnelle */
@@ -82,14 +91,33 @@ export async function saveExploitation(
 /** Étape 3 : cultures (remplace toutes les cultures existantes) */
 export async function saveCultures(
   exploitationId: string,
-  cultures: Array<{ type_culture: TypeCulture; surface_ha?: number; rendement_moyen?: number }>
+  cultures: Array<{ type_culture: TypeCulture; surface_ha?: number }>
 ): Promise<void> {
-  await supabase.from('cultures_exploitation').delete().eq('exploitation_id', exploitationId);
+  const { error: deleteError } = await supabase
+    .from('cultures_exploitation').delete().eq('exploitation_id', exploitationId);
+  if (deleteError) throw deleteError;
 
   if (cultures.length > 0) {
     const { error } = await supabase
       .from('cultures_exploitation')
       .insert(cultures.map(c => ({ ...c, exploitation_id: exploitationId })));
+    if (error) throw error;
+  }
+}
+
+/** Historique des cultures (remplace toutes les entrées existantes) */
+export async function saveHistorique(
+  exploitationId: string,
+  entries: Array<{ annee: number; type_culture: TypeCulture; surface_ha?: number; rendement?: number }>
+): Promise<void> {
+  const { error: deleteError } = await supabase
+    .from('historique_cultures').delete().eq('exploitation_id', exploitationId);
+  if (deleteError) throw deleteError;
+
+  if (entries.length > 0) {
+    const { error } = await supabase
+      .from('historique_cultures')
+      .insert(entries.map(e => ({ ...e, exploitation_id: exploitationId })));
     if (error) throw error;
   }
 }

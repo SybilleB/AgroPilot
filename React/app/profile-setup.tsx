@@ -3,9 +3,9 @@
  *
  * Étape 1 : Situation personnelle (téléphone, situation familiale, naissance, enfants)
  * Étape 2 : Exploitation (nom, localisation, surface, type, méthode, certifications)
- * Étape 3 : Assolement (cultures + surface ha + rendement moyen t/ha par culture)
+ * Étape 3 : Assolement (cultures + surface ha) + Historique des cultures
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
   Text, TextInput, TouchableOpacity, View,
@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
-import { getFullProfile, saveProfileStep1, saveExploitation, saveCultures } from '@/services/profile.service';
+import { getFullProfile, saveProfileStep1, saveExploitation, saveCultures, saveHistorique } from '@/services/profile.service';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PillSelect } from '@/components/ui/PillSelect';
@@ -108,9 +108,22 @@ export default function ProfileSetupScreen() {
   const [certifications, setCertifications]     = useState<Certification[]>([]);
 
   // ── Étape 3 : Assolement ────────────────────────────────────────────────────
-  const [selectedCultures, setSelectedCultures]   = useState<TypeCulture[]>([]);
-  const [surfacesCultures, setSurfacesCultures]   = useState<Record<TypeCulture, string>>({} as any);
-  const [rendementsCultures, setRendementsCultures] = useState<Record<TypeCulture, string>>({} as any);
+  const [selectedCultures, setSelectedCultures] = useState<TypeCulture[]>([]);
+  const [surfacesCultures, setSurfacesCultures] = useState<Record<TypeCulture, string>>({} as any);
+
+  // ── Historique des cultures ──────────────────────────────────────────────────
+  type HistEntry = { annee: string; type_culture: TypeCulture; surface_ha: string };
+  const [historique, setHistorique] = useState<HistEntry[]>([]);
+  const [newHistAnnee, setNewHistAnnee]     = useState('');
+  const [newHistCulture, setNewHistCulture] = useState<TypeCulture | null>(null);
+  const [newHistSurface, setNewHistSurface] = useState('');
+  const [histError, setHistError]           = useState('');
+
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   // ── Chargement des données existantes (mode édition) ────────────────────────
   useEffect(() => {
@@ -140,14 +153,19 @@ export default function ProfileSetupScreen() {
 
       if (c.length > 0) {
         setSelectedCultures(c.map(x => x.type_culture));
-        const surfaces: Record<string, string>   = {};
-        const rendements: Record<string, string> = {};
+        const surfaces: Record<string, string> = {};
         c.forEach(x => {
-          if (x.surface_ha)      surfaces[x.type_culture]   = String(x.surface_ha);
-          if (x.rendement_moyen) rendements[x.type_culture] = String(x.rendement_moyen);
+          if (x.surface_ha) surfaces[x.type_culture] = String(x.surface_ha);
         });
         setSurfacesCultures(surfaces as any);
-        setRendementsCultures(rendements as any);
+      }
+
+      if (existing.historique.length > 0) {
+        setHistorique(existing.historique.map(h => ({
+          annee:       String(h.annee),
+          type_culture: h.type_culture,
+          surface_ha:  h.surface_ha != null ? String(h.surface_ha) : '',
+        })));
       }
     })();
   }, [user]);
@@ -180,11 +198,17 @@ export default function ProfileSetupScreen() {
         certifications:     certifications.length ? certifications : undefined,
       });
 
-      // Étape 3
+      // Étape 3 — assolement
       await saveCultures(exploitationId, selectedCultures.map(tc => ({
-        type_culture:    tc,
-        surface_ha:      surfacesCultures[tc]   ? parseFloat(surfacesCultures[tc])   : undefined,
-        rendement_moyen: rendementsCultures[tc] ? parseFloat(rendementsCultures[tc]) : undefined,
+        type_culture: tc,
+        surface_ha:   surfacesCultures[tc] ? parseFloat(surfacesCultures[tc]) : undefined,
+      })));
+
+      // Historique
+      await saveHistorique(exploitationId, historique.map(h => ({
+        annee:        parseInt(h.annee, 10),
+        type_culture: h.type_culture,
+        surface_ha:   h.surface_ha ? parseFloat(h.surface_ha) : undefined,
       })));
 
       router.replace('/(app)');
@@ -315,13 +339,12 @@ export default function ProfileSetupScreen() {
           </View>
         )}
 
-        {/* ── ÉTAPE 3 : Assolement ──────────────────────────────────────────── */}
+        {/* ── ÉTAPE 3 : Assolement + Historique ────────────────────────────── */}
         {step === 3 && (
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>Assolement</Text>
             <Text style={styles.stepDesc}>
-              Sélectionnez vos cultures, renseignez la surface et votre rendement moyen historique (en t/ha).
-              {'\n'}Le rendement moyen sera utilisé par l'IA pour personnaliser vos simulations.
+              Sélectionnez vos cultures actuelles et renseignez la surface par culture.
             </Text>
 
             <Text style={styles.fieldLabel}>Cultures présentes sur l'exploitation</Text>
@@ -339,7 +362,6 @@ export default function ProfileSetupScreen() {
                 <View style={styles.cultureHeader}>
                   <Text style={[styles.cultureCol, styles.cultureColLabel]}>Culture</Text>
                   <Text style={styles.cultureCol}>Surface (ha)</Text>
-                  <Text style={styles.cultureCol}>Rdt moyen (t/ha)</Text>
                 </View>
 
                 {selectedCultures.map(tc => {
@@ -353,13 +375,6 @@ export default function ProfileSetupScreen() {
                         keyboardType="decimal-pad"
                         value={surfacesCultures[tc] ?? ''}
                         onChangeText={v => setSurfacesCultures(prev => ({ ...prev, [tc]: v }))}
-                      />
-                      <TextInput
-                        style={[styles.cultureCol, styles.cultureInput]}
-                        placeholder="—"
-                        keyboardType="decimal-pad"
-                        value={rendementsCultures[tc] ?? ''}
-                        onChangeText={v => setRendementsCultures(prev => ({ ...prev, [tc]: v }))}
                       />
                     </View>
                   );
@@ -375,6 +390,93 @@ export default function ProfileSetupScreen() {
 
               </View>
             )}
+
+            {/* ── Historique des cultures ─────────────────────────────────────── */}
+            <View style={styles.histSection}>
+              <Text style={styles.histTitle}>📋 Historique des cultures</Text>
+              <Text style={styles.histDesc}>
+                Ajoutez vos campagnes passées — l'IA les utilisera pour affiner ses prévisions de rendement et de prix.
+              </Text>
+
+              {/* Formulaire d'ajout */}
+              <View style={styles.histForm}>
+                <View style={styles.histFormRow}>
+                  <View style={styles.histFormAnnee}>
+                    <Input
+                      label="Année"
+                      placeholder="2023"
+                      value={newHistAnnee}
+                      onChangeText={setNewHistAnnee}
+                      keyboardType="numeric"
+                      maxLength={4}
+                    />
+                  </View>
+                  <View style={styles.histFormSurface}>
+                    <Input
+                      label="Surface (ha)"
+                      placeholder="—"
+                      value={newHistSurface}
+                      onChangeText={setNewHistSurface}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <Text style={styles.fieldLabel}>Culture</Text>
+                <PillSelect
+                  options={CULTURES}
+                  value={newHistCulture}
+                  onChange={v => setNewHistCulture(v as TypeCulture)}
+                />
+
+                {histError ? <Text style={styles.histErrorText}>⚠️ {histError}</Text> : null}
+
+                <TouchableOpacity
+                  style={styles.histAddBtn}
+                  onPress={() => {
+                    setHistError('');
+                    if (!newHistAnnee || newHistAnnee.length !== 4) {
+                      setHistError('Entrez une année valide (ex : 2023).'); return;
+                    }
+                    if (!newHistCulture) {
+                      setHistError('Sélectionnez une culture.'); return;
+                    }
+                    setHistorique(prev => [
+                      ...prev,
+                      { annee: newHistAnnee, type_culture: newHistCulture!, surface_ha: newHistSurface },
+                    ]);
+                    setNewHistAnnee('');
+                    setNewHistCulture(null);
+                    setNewHistSurface('');
+                  }}
+                >
+                  <Text style={styles.histAddBtnText}>+ Ajouter cette campagne</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Liste des entrées */}
+              {historique.length > 0 && (
+                <View style={styles.histList}>
+                  {historique.map((entry, i) => (
+                    <View key={i} style={styles.histEntry}>
+                      <Text style={styles.histEntryText}>
+                        <Text style={styles.histEntryYear}>{entry.annee}</Text>
+                        {'  '}
+                        {CULTURES.find(c => c.value === entry.type_culture)?.label ?? entry.type_culture}
+                        {entry.surface_ha ? `  ·  ${entry.surface_ha} ha` : ''}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => setHistorique(prev => prev.filter((_, j) => j !== i))}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text style={styles.histDelete}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
           </View>
         )}
 
@@ -450,4 +552,20 @@ const styles = StyleSheet.create({
   navBtn:   { flex: 1 },
   skipBtn:  { alignItems: 'center', marginTop: 16 },
   skipText: { fontSize: 13, color: Colors.textMuted, textDecorationLine: 'underline' },
+  // Historique
+  histSection:    { marginTop: 32, paddingTop: 24, borderTopWidth: 1, borderTopColor: Colors.border },
+  histTitle:      { fontSize: 16, fontWeight: '700', color: Colors.primaryDark, marginBottom: 6 },
+  histDesc:       { fontSize: 12, color: Colors.textMuted, lineHeight: 18, marginBottom: 16 },
+  histForm:       { backgroundColor: Colors.background ?? '#F8F9FA', borderRadius: 12, padding: 16, marginBottom: 12 },
+  histFormRow:    { flexDirection: 'row', gap: 12 },
+  histFormAnnee:  { flex: 1 },
+  histFormSurface:{ flex: 1 },
+  histErrorText:  { fontSize: 12, color: Colors.error, marginBottom: 8 },
+  histAddBtn:     { marginTop: 12, backgroundColor: Colors.primary, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  histAddBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  histList:       { gap: 0 },
+  histEntry:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  histEntryText:  { fontSize: 13, color: Colors.text, flex: 1 },
+  histEntryYear:  { fontWeight: '700', color: Colors.primaryDark },
+  histDelete:     { fontSize: 14, color: Colors.error, paddingLeft: 12, fontWeight: '600' },
 });

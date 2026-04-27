@@ -163,10 +163,7 @@ export default function ProfileScreen() {
             <Row
               key={i}
               label={c.type_culture.replace(/_/g, ' ')}
-              value={[
-                c.surface_ha      ? `${c.surface_ha} ha`     : null,
-                c.rendement_moyen ? `${c.rendement_moyen} t/ha` : null,
-              ].filter(Boolean).join(' · ') || '—'}
+              value={c.surface_ha ? `${c.surface_ha} ha` : '—'}
             />
           ))}
         </Card>

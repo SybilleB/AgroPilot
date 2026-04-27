@@ -73,7 +73,17 @@ export interface CultureExploitation {
   exploitation_id: string;
   type_culture: TypeCulture;
   surface_ha?: number;         // surface dédiée à cette culture
-  rendement_moyen?: number;    // t/ha (historique ou estimé)
+}
+
+// ─── Historique des cultures ───────────────────────────────────────────────
+
+export interface HistoriqueCulture {
+  id?: string;
+  exploitation_id: string;
+  annee: number;               // ex : 2023
+  type_culture: TypeCulture;
+  surface_ha?: number;         // ha cultivés cette année-là
+  rendement?: number;          // t/ha réalisé (optionnel)
 }
 
 export type TypeCulture =
