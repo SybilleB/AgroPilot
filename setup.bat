@@ -126,14 +126,23 @@ echo  =======================================================
 echo   Commandes pour lancer le projet
 echo  =======================================================
 echo.
-echo   Frontend (Expo) :
-echo     cd React
-echo     npx expo start
+echo  Avant de lancer, assurez-vous de :
+echo   1- Configuration du fichier Api.ts dans React\constants :
+echo    REMPLACER http://localhost:8000/ par l'URL de votre backend si different
+echo   2- Configuration du fichier .env dans React\ (Supabase)
+echo   3- Ouvrir le port TCP 8000 dans votre firewall si vous voulez acceder au backend depuis un autre appareil
 echo.
+echo Lancer le projet :
+echo.
+echo   Ouvrir 2 terminaux :
 echo   Backend (FastAPI) :
 echo     cd FastAPI
 echo     venv\Scripts\activate
-echo     uvicorn main:app --reload
+echo     python -m uvicorn main:app --host 0.0.0.0 --port 8000
+echo.
+echo   Frontend (Expo) :
+echo     cd React
+echo     npx expo start
 echo.
 echo   API docs : http://localhost:8000/docs
 echo.
