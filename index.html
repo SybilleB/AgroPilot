@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>AgroPilot - Test IA</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; line-height: 1.6; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 12px 20px; background: #2e7d32; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #resultat { background: #f4f4f4; padding: 20px; border-radius: 8px; white-space: pre-wrap; display: none; }
+        .loading { color: #2e7d32; font-weight: bold; display: none; }
+    </style>
+</head>
+<body>
+    <h1>🚜 AgroPilot - Recherche d'Aides</h1>
+    <div class="search-box">
+        <input type="text" id="query" placeholder="Ex: aides installation 2026...">
+        <button onclick="lancerRecherche()">Rechercher</button>
+    </div>
+    <div id="loading" class="loading">L'IA réfléchit... (Tavily + Gemini en cours)</div>
+    <div id="resultat"></div>
+
+    <script>
+        async function lancerRecherche() {
+            const query = document.getElementById('query').value;
+            const resDiv = document.getElementById('resultat');
+            const loadDiv = document.getElementById('loading');
+            
+            if(!query) return;
+
+            loadDiv.style.display = 'block';
+            resDiv.style.display = 'none';
+
+            try {
+                // On appelle ton serveur FastAPI qui tourne sur le port 8000
+                const response = await fetch(`http://127.0.0.1:8000/recherche-aides?query=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                loadDiv.style.display = 'none';
+                resDiv.style.display = 'block';
+                resDiv.innerHTML = `<h3>Analyse pour : ${data.query}</h3><p>${data.analyse_ia}</p>`;
+            } catch (error) {
+                loadDiv.style.display = 'none';
+                alert("Erreur : Vérifie que ton FastAPI (Python) est bien lancé !");
+            }
+        }
+    </script>
+</body>
+</html>
