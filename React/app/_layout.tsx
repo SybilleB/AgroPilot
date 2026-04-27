@@ -9,7 +9,7 @@
  * Important : profile.tsx NE doit PAS appeler router.replace après logout.
  * Le guard ici s'en charge seul via onAuthStateChange.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -18,8 +18,11 @@ import { Colors } from '@/constants/Colors';
 
 export default function RootLayout() {
   const { session, loading } = useAuth();
-  const router   = useRouter();
-  const segments = useSegments();
+  const router     = useRouter();
+  const segments   = useSegments();
+  // Évite les redirections en boucle : on ne navigue pas si une navigation
+  // est déjà en cours.
+  const navigating = useRef(false);
 
   useEffect(() => {
     if (loading) return;
@@ -28,14 +31,14 @@ export default function RootLayout() {
     const inProfileSetup = segments[0] === 'profile-setup';
     const inProtected    = inApp || inProfileSetup;
 
-    if (!session && inProtected) {
-      // Pas de session dans une zone protégée → login
-      // On va vers /login et non '/' car sur web, (app)/index et app/index
-      // ont tous les deux l'URL '/' → router.replace('/') ne navigue pas.
+    if (!session && inProtected && !navigating.current) {
+      navigating.current = true;
       router.replace('/(auth)/login');
-    } else if (session && !inProtected) {
-      // Session active mais hors zone protégée → dashboard
+      setTimeout(() => { navigating.current = false; }, 500);
+    } else if (session && !inProtected && !navigating.current) {
+      navigating.current = true;
       router.replace('/(app)');
+      setTimeout(() => { navigating.current = false; }, 500);
     }
   }, [session, loading, segments]);
 
