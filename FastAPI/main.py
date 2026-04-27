@@ -1,82 +1,67 @@
-from fastapi import FastAPI, Query
-from datetime import date, timedelta
-from schemas import RecommendationRequest, RecommendationResponse, Intervention
-from services import get_historique_meteo
+import os
+import json
+from fastapi import FastAPI, HTTPException
+from google import genai
+from google.genai import types
+from schemas import RequeteIA, ConseilAgricole
+from services import get_previsions_meteo
 
-app = FastAPI(
-    title="AGRO PILOT",
-    description="API pour les recommandations agronomiques",
-    version="1.0.0"
-)
+app = FastAPI()
 
-@app.post(
-    "/api/recommandations/semis", 
-    response_model=RecommendationResponse,
-    summary="Obtenir une recommandation de semis et fertilisation"
-)
-async def obtenir_recommandation(donnees: RecommendationRequest):
-    """
-    Cette route reçoit les données de la parcelle (GPS, sol, culture)
-    et renvoie l'optimum technico-économique (bouchonné pour le moment).
-    """
-    
-    aujourd_hui = date.today()
-    
-    reponse_mock = RecommendationResponse(
-        date_semis_optimale=aujourd_hui + timedelta(days=5),
-        variete_recommandee=f"Variété standard adaptée au sol {donnees.type_sol.value}",
-        explication_meteo="Les prévisions indiquent 15mm de pluie dans 5 jours, idéal pour la levée.",
-        plan_fertilisation=[
-            Intervention(
-                date_prevue=aujourd_hui + timedelta(days=20),
-                action="1er apport azoté",
-                produit_ou_engrais="Ammonitrate",
-                quantite="40",
-                unite="kg/ha"
-            )
-        ],
-        plan_phytosanitaire=[],
-        score_confiance=0.85
-    )
-    
-    return reponse_mock
+# Initialisation du client Gemini
+client_gemini = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
 
-@app.get(
-    "/api/meteo/historique", 
-    summary="Récupérer l'historique météo (Open-Meteo)"
-)
-async def route_historique_meteo(
-    lat: float = Query(..., description="Latitude"),
-    lon: float = Query(..., description="Longitude"),
-    jours_en_arriere: int = Query(30, description="Combien de jours d'historique ?")
-):
-    """
-    Route proxy pour récupérer la météo passée d'une parcelle.
-    """
-    date_fin = date.today() - timedelta(days=2) 
-    date_debut = date_fin - timedelta(days=jours_en_arriere)
-    
-    donnees_meteo = await get_historique_meteo(lat, lon, date_debut, date_fin)
-    
-    return {
-        "parcelle": {"latitude": lat, "longitude": lon},
-        "periode": {"debut": date_debut, "fin": date_fin},
-        "donnees": donnees_meteo
-    }
-    
-@app.post("/api/parcelles", summary="Sauvegarder une nouvelle parcelle")
-async def sauvegarder_parcelle(parcelle: RecommendationRequest, nom: str):
-    """
-    Enregistre les coordonnées et les choix de l'agriculteur dans Supabase.
-    """
-    nouvelle_entree = {
-        "nom": nom,
-        "latitude": parcelle.latitude,
-        "longitude": parcelle.longitude,
-        "culture_code": parcelle.culture.value,
-        "type_sol": parcelle.type_sol.value
-    }
+# Chargement de ton JSON local
+with open("data/cultures.json", "r", encoding="utf-8") as f:
+    CULTURES_DB = json.load(f)
 
-    resultat = supabase.table("parcelles").insert(nouvelle_entree).execute()
+@app.post("/api/ia/generer-conseil")
+async def generer_conseil_agricole(requete: RequeteIA):
+    # 1. Trouver les infos de la culture
+    culture_data = next((c for c in CULTURES_DB if c["libelle"].lower() == requete.culture.lower()), None)
+    if not culture_data:
+        raise HTTPException(status_code=404, detail="Culture non trouvée dans la base")
+
+    # 2. Récupérer la météo
+    try:
+        meteo = await get_previsions_meteo(requete.latitude, requete.longitude)
+    except Exception:
+        meteo = "Données météo indisponibles."
+
+    # 3. Le Prompt (Plus besoin de lui expliquer comment faire un JSON !)
+    prompt = f"""
+    Tu es un conseiller agronome expert. 
     
-    return {"status": "success", "data": resultat.data}
+    DONNÉES DE L'AGRICULTEUR :
+    - Surface : {requete.hectares} hectares
+    - Culture visée : {requete.culture}
+    - Type de sol : {requete.type_sol}
+    
+    RÉFÉRENCES AGRONOMIQUES :
+    {json.dumps(culture_data, ensure_ascii=False)}
+    
+    MÉTÉO PRÉVUE (7 jours) :
+    {json.dumps(meteo, ensure_ascii=False)}
+    
+    MISSION :
+    Calcule le prévisionnel économique pour cette surface totale en ajustant les rendements au type de sol.
+    Analyse la météo pour donner un conseil de semis et un statut (FEU VERT, FEU ROUGE ou ATTENTE).
+    """
+
+    # 4. Appel à l'API Gemini (Modèle 2.5 Flash : ultra rapide et économique)
+    try:
+        reponse = await client_gemini.aio.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.1, # Température très basse pour rester mathématique
+                response_mime_type="application/json",
+                response_schema=ConseilAgricole, # On force Gemini à utiliser ton schéma Pydantic !
+            ),
+        )
+        
+        # 5. La réponse est garantie d'être un JSON valide correspondant à ton schéma
+        return json.loads(reponse.text)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
