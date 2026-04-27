@@ -8,7 +8,7 @@ setlocal enabledelayedexpansion
 
 echo.
 echo  ===========================================
-echo   AgroPilot - Setup Windows
+echo   AgroPilot - Setup Windows (IA & Cache)
 echo  ===========================================
 echo.
 
@@ -58,28 +58,31 @@ if not exist "%REACT_DIR%" (
 
 :: Creer le .env si absent
 if not exist "%REACT_DIR%\.env" (
-    echo     Fichier .env manquant, creation depuis la racine...
+    echo      Fichier .env manquant, creation depuis la racine...
     if exist "%SCRIPT_DIR%.env" (
         copy "%SCRIPT_DIR%.env" "%REACT_DIR%\.env" >nul
-        echo     OK .env copie dans React\
+        echo      OK .env copie dans React\
     ) else (
-        echo     X Aucun .env trouve. Cree React\.env avec :
-        echo          EXPO_PUBLIC_SUPABASE_URL=...
-        echo          EXPO_PUBLIC_SUPABASE_ANON_KEY=...
+        echo      X Aucun .env trouve. Cree React\.env avec Supabase.
     )
 ) else (
-    echo     OK .env deja present
+    echo      OK .env deja present
 )
 
 :: Installer les dependances npm
-echo     Installation des packages npm...
+echo      Installation des packages npm...
 cd /d "%REACT_DIR%"
 call npm install
 if !errorlevel! neq 0 (
     echo  X npm install a echoue.
     pause & exit /b 1
 )
-echo  OK Frontend installe
+
+:: Installation specifique du Cache pour l'IA
+echo      Installation du module de cache (AsyncStorage)...
+call npx expo install @react-native-async-storage/async-storage
+
+echo  OK Frontend installe avec support du Cache.
 echo.
 
 :: ─────────────────────────────────────────────────────────────
@@ -96,7 +99,7 @@ cd /d "%FASTAPI_DIR%"
 
 :: Creer le venv s'il est absent
 if not exist "venv\Scripts\activate.bat" (
-    echo     Creation du venv Python...
+    echo      Creation du venv Python...
     python -m venv venv
     if !errorlevel! neq 0 (
         echo  X Impossible de creer le venv.
@@ -105,7 +108,7 @@ if not exist "venv\Scripts\activate.bat" (
 )
 
 :: Activer le venv et installer les dependances
-echo     Activation du venv et installation des packages...
+echo      Activation du venv et installation des packages...
 call venv\Scripts\activate.bat
 python -m pip install --upgrade pip --quiet
 pip install -r requirements.txt --quiet
@@ -120,32 +123,23 @@ echo.
 :: ─────────────────────────────────────────────────────────────
 :: 3. Resume & commandes de lancement
 :: ─────────────────────────────────────────────────────────────
-echo [3/3] Installation terminee ^^!
+echo [3/3] Installation terminee !
 echo.
 echo  =======================================================
 echo   Commandes pour lancer le projet
 echo  =======================================================
 echo.
-echo  Avant de lancer, assurez-vous de :
-echo   1- Configuration du fichier Api.ts dans React\constants :
-echo    REMPLACER http://localhost:8000/ par l'URL de votre backend si different
-echo   2- Configuration du fichier .env dans React\ (Supabase)
-echo   3- Ouvrir le port TCP 8000 dans votre firewall si vous voulez acceder au backend depuis un autre appareil
-echo.
-echo Lancer le projet :
-echo.
-echo   Ouvrir 2 terminaux :
-echo   Backend (FastAPI) :
+echo  1. Backend (FastAPI) - Mode Demo active :
 echo     cd FastAPI
 echo     venv\Scripts\activate
 echo     python -m uvicorn main:app --host 0.0.0.0 --port 8000
 echo.
-echo   Frontend (Expo) :
+echo  2. Frontend (Expo) - Cache AsyncStorage pret :
 echo     cd React
-echo     npx expo start
+echo     npx expo start --tunnel
 echo.
-echo   API docs : http://localhost:8000/docs
-echo.
+echo  Note : L'option --tunnel est recommandee pour eviter 
+echo  les problemes de reseau local sur mobile.
 echo  =======================================================
 echo.
 pause

@@ -237,6 +237,7 @@ def read_root():
     return {"status": "ok", "service": "AgroPilot API"}
 
 
+'''
 @app.post("/subventions/suggestions", response_model=List[SubventionCard])
 async def get_subvention_suggestions(profile: ProfilePayload):
     """
@@ -273,3 +274,44 @@ async def get_subvention_suggestions(profile: ProfilePayload):
             pass  # ignore les cartes mal formées
 
     return validated
+'''
+
+
+
+# ─── Endpoint de démo (données simulées) ─────────────────────────────────────
+@app.post("/subventions/suggestions", response_model=List[SubventionCard])
+async def get_subvention_suggestions(profile: ProfilePayload):
+    """
+    MODE DÉMO : Renvoie des données simulées pour éviter l'erreur de quota 429.
+    """
+    # 1. On prépare une réponse "Fake" ultra réaliste pour ta démo
+    mock_cards = [
+        {
+            "nom": "Dotation Jeunes Agriculteurs (DJA)",
+            "organisme": "ASP / État",
+            "description": "Aide principale à l'installation pour soutenir les nouveaux exploitants.",
+            "montant_label": "Jusqu'à 35 000 €",
+            "pourquoi_eligible": f"Adapté à votre profil {profile.type_exploitation or 'agricole'} en zone {profile.region or 'France'}.",
+            "demarches": "Dépôt du Plan d'Entreprise (PE) auprès de la DDT.",
+            "url": "https://www.economie.gouv.fr",
+            "categorie": "national",
+            "score": 5
+        },
+        {
+            "nom": "Éco-Régime PAC 2025",
+            "organisme": "Europe / ASP",
+            "description": "Prime versée aux agriculteurs respectant des pratiques favorables à l'environnement.",
+            "montant_label": "82 € / hectare",
+            "pourquoi_eligible": "Calculé selon vos méthodes de production.",
+            "demarches": "Déclaration annuelle via Télépac avant le 15 mai.",
+            "url": "https://www.telepac.agriculture.gouv.fr",
+            "categorie": "pac",
+            "score": 4
+        }
+    ]
+
+    # 2. On attend juste 1.5 seconde pour simuler une réflexion de l'IA (plus pro en démo)
+    await asyncio.sleep(1.5)
+
+    # 3. On retourne les données simulées
+    return [SubventionCard(**c) for c in mock_cards]
