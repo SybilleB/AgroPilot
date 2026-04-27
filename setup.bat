@@ -53,7 +53,7 @@ if not exist "node_modules" (
     echo      Installation initiale de npm...
     call npm install
 )
-call npx expo install @react-native-async-storage/async-storage --quiet
+call npx expo install @react-native-async-storage/async-storage
 
 :: Backend
 cd /d "%FASTAPI_DIR%"

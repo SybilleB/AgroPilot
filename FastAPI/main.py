@@ -194,40 +194,58 @@ Format de chaque objet :
 
 Trie par score décroissant. Sois précis, concret et adapté au profil fourni."""
 
-
 async def call_gemini(prompt: str) -> List[dict]:
-    """Appelle Gemini via le SDK officiel (thread pool pour rester async)."""
+    """Appelle Gemini via le SDK officiel avec repli sur plusieurs modèles."""
+    
     if not GOOGLE_API_KEY:
-        raise HTTPException(status_code=503, detail="GOOGLE_API_KEY manquante dans le fichier .env du serveur.")
+        raise HTTPException(status_code=503, detail="Clé API manquante")
 
-    def _run() -> str:
-        model = genai.GenerativeModel(
-            model_name="gemini-flash-latest",
-            generation_config=genai.GenerationConfig(
-                temperature=0.3,
-                max_output_tokens=4096,
-            ),
-        )
-        response = model.generate_content(prompt)
-        return response.text
+    # Liste des modèles par ordre de préférence
+    models_to_try = [
+        "models/gemini-3.1-flash-lite-preview", # Le top du top pour la rapidité
+        "models/gemini-3-flash-preview",        # Très performant
+        "models/gemini-2.0-flash",              # Stable et rapide
+        "models/gemini-flash-latest"
+    ]
 
-    try:
-        loop = asyncio.get_event_loop()
-        raw  = await loop.run_in_executor(ThreadPoolExecutor(max_workers=1), _run)
-        raw  = raw.strip()
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Erreur Gemini SDK : {e}")
+    last_error = ""
 
-    # Extrait le JSON même si Gemini a ajouté du texte autour
-    start = raw.find("[")
-    end   = raw.rfind("]") + 1
-    if start == -1 or end == 0:
-        raise HTTPException(status_code=502, detail=f"Pas de tableau JSON dans la réponse Gemini. Reçu : {raw[:300]}")
+    for model_name in models_to_try:
+        try:
+            print(f"🤖 Tentative avec le modèle : {model_name}...")
+            
+            model = genai.GenerativeModel(
+                model_name=model_name,
+                generation_config=genai.GenerationConfig(
+                    temperature=0.3,
+                    max_output_tokens=4096,
+                )
+            )
 
-    try:
-        return json.loads(raw[start:end])
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=502, detail=f"JSON non parsable : {e} — Reçu : {raw[start:start+300]}")
+            # Exécution thread-safe pour FastAPI
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None, 
+                lambda: model.generate_content(prompt)
+            )
+            
+            raw = response.text.strip()
+            
+            # Extraction du JSON dans la réponse
+            start = raw.find("[")
+            end = raw.rfind("]") + 1
+            if start != -1 and end != 0:
+                return json.loads(raw[start:end])
+            
+        except Exception as e:
+            last_error = str(e)
+            print(f"❌ Échec avec {model_name} : {last_error}")
+            continue 
+
+    raise HTTPException(
+        status_code=502, 
+        detail=f"Échec critique IA. Dernière erreur : {last_error}"
+    )
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
@@ -237,7 +255,7 @@ def read_root():
     return {"status": "ok", "service": "AgroPilot API"}
 
 
-'''
+
 @app.post("/subventions/suggestions", response_model=List[SubventionCard])
 async def get_subvention_suggestions(profile: ProfilePayload):
     """
@@ -274,10 +292,10 @@ async def get_subvention_suggestions(profile: ProfilePayload):
             pass  # ignore les cartes mal formées
 
     return validated
+
+
+
 '''
-
-
-
 # ─── Endpoint de démo (données simulées) ─────────────────────────────────────
 @app.post("/subventions/suggestions", response_model=List[SubventionCard])
 async def get_subvention_suggestions(profile: ProfilePayload):
@@ -315,3 +333,4 @@ async def get_subvention_suggestions(profile: ProfilePayload):
 
     # 3. On retourne les données simulées
     return [SubventionCard(**c) for c in mock_cards]
+'''
