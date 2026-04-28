@@ -3,6 +3,7 @@
 .env.*
 
 React/node_modules/
+React/node_modules */
 React/.expo/
 React/dist/
 React/web-build/
