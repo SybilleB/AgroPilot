@@ -9,19 +9,27 @@ import { Colors } from '@/constants/Colors';
 
 // ─── Composant Widget Météo Interactif ────────────────────────────────────────
 
-function MeteoWidget({ commune, onPress }: { commune?: string, onPress: () => void }) {
-  // Note : Ces données pourront être liées à une API météo réelle plus tard.
-  // Pour la démo, on simule un état "optimal" ou "alerte".
-  const temp = "22°C";
-  const condition = "Soleil"; // Options : "Pluie", "Vent", "Grêle", "Soleil"
+function MeteoWidget({ commune, condition, temp, onPress }: { commune?: string, condition: string, temp: string, onPress: () => void }) {
 
   const getMeteoStyle = () => {
-    switch (condition) {
-      case "Pluie": return { icon: "🌧️", advice: "Risque de lessivage : différez l'épandage." };
-      case "Vent": return { icon: "💨", advice: "Rafales à 45km/h : traitement déconseillé." };
-      case "Grêle": return { icon: "⛈️", advice: "Alerte grêle : mettez le matériel à l'abri." };
-      default: return { icon: "☀️", advice: "Aucune intempérie à venir : conditions optimales." };
+    // On passe tout en minuscule pour être sûr de matcher les mots-clés
+    const cond = condition.toLowerCase();
+
+    if (cond.includes("nuage") || cond.includes("couvert")) {
+      return { icon: "☁️", advice: "Ciel couvert : idéal pour l'entretien du matériel." };
     }
+    if (cond.includes("pluie") || cond.includes("averse")) {
+      return { icon: "🌧️", advice: "Risque de lessivage : différez l'épandage." };
+    }
+    if (cond.includes("vent")) {
+      return { icon: "💨", advice: "Vent fort : attention à la dérive des produits." };
+    }
+    if (cond.includes("orage") || cond.includes("grêle")) {
+      return { icon: "⛈️", advice: "Alerte orage : surveillez vos parcelles." };
+    }
+
+    // Valeur par défaut si rien ne correspond (Soleil)
+    return { icon: "☀️", advice: "Aucune intempérie à venir : conditions optimales." };
   };
 
   const { icon, advice } = getMeteoStyle();
@@ -130,6 +138,8 @@ export default function DashboardScreen() {
       {/* ─── WIDGET MÉTÉO ───────────────────────────────────────────────── */}
       <MeteoWidget
         commune={exploitation?.commune}
+        condition="Nuageux" // <--- TEST : Remplace par "Pluie" ou "Orage" pour voir l'emoji changer !
+        temp="14°C"        // <--- Tu peux aussi changer la température ici
         onPress={() => router.push('/(app)/meteo')}
       />
 
