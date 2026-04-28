@@ -313,16 +313,19 @@ async def get_marche_analyse(req: MarcheRequest):
 
     today = datetime.date.today().strftime("%d/%m/%Y")
     
-    if not isinstance(data, dict):
-        raise HTTPException(status_code=500, detail="L'IA n'a pas renvoyé le bon format (objet attendu).")
+    # On filtre pour s'assurer que l'IA a bien renvoyé des dictionnaires (objets) 
+    # et non du texte brut, pour éviter l'erreur TypeError (**p)
+    prix_valides = [PrixCulture(**p) for p in data.get("prix", []) if isinstance(p, dict)]
+    recos_valides = [Recommandation(**r) for r in data.get("recommandations", []) if isinstance(r, dict)]
+    actus_valides = [Actualite(**a) for a in data.get("actualites", []) if isinstance(a, dict)]
 
     return MarcheAnalyse(
-        prix            = [PrixCulture(**p) for p in data.get("prix", [])],
-        synthese        = data.get("synthese", ""),
-        recommandations = [Recommandation(**r) for r in data.get("recommandations", [])],
-        opportunites    = data.get("opportunites", []),
-        risques         = data.get("risques", []),
-        actualites      = [Actualite(**a) for a in data.get("actualites", [])],
+        prix            = prix_valides,
+        synthese        = data.get("synthese", "Synthèse non disponible."),
+        recommandations = recos_valides,
+        opportunites    = data.get("opportunites", []) if isinstance(data.get("opportunites"), list) else [],
+        risques         = data.get("risques", []) if isinstance(data.get("risques"), list) else [],
+        actualites      = actus_valides,
         horodatage      = data.get("horodatage", today),
     )
 
