@@ -2,12 +2,15 @@
 FastAPI — AgroPilot backend
 Endpoints :
   GET  /                          → healthcheck
-  POST /subventions/suggestions   → analyse IA (Tavily + Claude) des aides éligibles
+  POST /subventions/suggestions   → analyse IA (Tavily + Gemini) des aides éligibles
+  POST /marche/analyse            → analyse marchés personnalisée (prix MATIF + news + IA)
+  POST /marche/recherche          → recherche libre sur n'importe quel sujet agricole
 """
 
 import os
 import json
 import asyncio
+import datetime
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional
 
@@ -248,6 +251,267 @@ async def call_gemini(prompt: str) -> List[dict]:
     )
 
 
+# ─── Modèles Marchés ──────────────────────────────────────────────────────────
+
+class MarcheRequest(BaseModel):
+    cultures:           Optional[List[str]] = []
+    type_exploitation:  Optional[str]       = None
+    methode_production: Optional[str]       = None
+    region:             Optional[str]       = None
+    departement:        Optional[str]       = None
+    surface_ha:         Optional[float]     = None
+
+class RechercheRequest(BaseModel):
+    question: str
+    cultures: Optional[List[str]] = []
+    region:   Optional[str]       = None
+
+class PrixCulture(BaseModel):
+    culture:       str
+    prix_actuel:   Optional[str]  = None   # ex: "215 €/t"
+    tendance:      Optional[str]  = None   # "hausse" | "baisse" | "stable"
+    variation:     Optional[str]  = None   # ex: "+2.3%"
+    contexte:      Optional[str]  = None
+
+class Recommandation(BaseModel):
+    titre:   str
+    detail:  str
+    urgence: str  # "haute" | "normale" | "basse"
+
+class Actualite(BaseModel):
+    titre:      str
+    resume:     str
+    source:     Optional[str] = None
+    url:        Optional[str] = None
+    importance: str  # "haute" | "normale"
+
+class MarcheAnalyse(BaseModel):
+    prix:             List[PrixCulture]
+    synthese:         str
+    recommandations:  List[Recommandation]
+    opportunites:     List[str]
+    risques:          List[str]
+    actualites:       List[Actualite]
+    horodatage:       str
+
+class RechercheResultat(BaseModel):
+    question:  str
+    reponse:   str
+    sources:   List[dict]
+    horodatage: str
+
+# ─── Helpers Marchés ──────────────────────────────────────────────────────────
+
+CULTURE_LABELS = {
+    "ble_tendre":   "blé tendre",
+    "ble_dur":      "blé dur",
+    "mais":         "maïs",
+    "colza":        "colza",
+    "soja":         "soja",
+    "orge":         "orge",
+    "tournesol":    "tournesol",
+    "pois":         "pois protéagineux",
+    "lin":          "lin",
+    "betterave":    "betterave sucrière",
+    "pomme_de_terre": "pomme de terre",
+    "vigne":        "vigne",
+    "prairie":      "prairies / fourrage",
+}
+
+def build_marche_queries(req: MarcheRequest) -> List[str]:
+    """Génère des requêtes Tavily ciblées sur les marchés agricoles."""
+    today = datetime.date.today().strftime("%B %Y")
+    cultures_labels = [CULTURE_LABELS.get(c, c.replace("_", " ")) for c in (req.cultures or [])]
+    localisation = req.region or req.departement or "France"
+    type_label = TYPE_LABELS.get(req.type_exploitation or "", "agriculture")
+
+    queries = []
+
+    # Prix matières premières des cultures de l'agriculteur
+    if cultures_labels:
+        crops_str = " ".join(cultures_labels[:4])
+        queries.append(f"cours prix {crops_str} MATIF Euronext €/tonne {today}")
+        queries.append(f"tendance marché {crops_str} France prévision prix {today}")
+    else:
+        queries.append(f"prix céréales blé maïs colza MATIF Euronext €/tonne {today}")
+
+    # Intrants et coûts de production
+    queries.append(f"prix engrais urée azote carburant GNR agriculteur France {today}")
+
+    # Actualités marché et conjoncture
+    queries.append(f"actualités marché agricole conjoncture {type_label} {localisation} {today}")
+
+    # Concurrence et débouchés
+    if cultures_labels:
+        queries.append(f"débouchés marchés export {' '.join(cultures_labels[:2])} France compétitivité {today}")
+
+    return queries[:5]
+
+
+def build_marche_prompt(req: MarcheRequest, search_results: List[dict]) -> str:
+    """Construit le prompt Gemini pour l'analyse de marché personnalisée."""
+    today = datetime.date.today().strftime("%d/%m/%Y")
+    cultures_labels = [CULTURE_LABELS.get(c, c.replace("_", " ")) for c in (req.cultures or [])]
+    type_label = TYPE_LABELS.get(req.type_exploitation or "", "agriculteur")
+    methode = METHODE_LABELS.get(req.methode_production or "", "")
+    localisation = req.region or req.departement or "France"
+
+    profile_lines = [f"- Type : {type_label}"]
+    if methode:
+        profile_lines.append(f"- Méthode : {methode}")
+    if req.surface_ha:
+        profile_lines.append(f"- Surface : {req.surface_ha} ha")
+    if cultures_labels:
+        profile_lines.append(f"- Cultures : {', '.join(cultures_labels)}")
+    profile_lines.append(f"- Localisation : {localisation}")
+
+    snippets = []
+    for r in search_results[:15]:
+        title   = r.get("title", "")
+        content = r.get("content", "")[:500]
+        url     = r.get("url", "")
+        snippets.append(f"[{title}]\n{content}\nURL: {url}")
+    tavily_block = "\n\n---\n".join(snippets) if snippets else "Pas de résultats disponibles."
+
+    return f"""Tu es un analyste de marché agricole expert pour les exploitants français.
+Date du jour : {today}
+
+## Profil de l'exploitant
+{chr(10).join(profile_lines)}
+
+## Sources de marché récentes (Tavily)
+{tavily_block}
+
+## Ta mission
+Analyse ces données et retourne UN OBJET JSON UNIQUE (pas un tableau) avec l'analyse complète.
+
+IMPORTANT : retourne UNIQUEMENT un objet JSON valide, sans texte avant ni après, sans balises markdown.
+
+Format exact :
+{{
+  "prix": [
+    {{
+      "culture": "Nom lisible de la culture",
+      "prix_actuel": "ex: 215 €/t ou 'données indisponibles'",
+      "tendance": "hausse" ou "baisse" ou "stable",
+      "variation": "ex: +2.3% sur 1 mois ou null",
+      "contexte": "1 phrase expliquant pourquoi ce prix (météo Ukraine, demande export, etc.)"
+    }}
+  ],
+  "synthese": "Paragraphe de 3-4 phrases sur la situation globale du marché pour CET exploitant aujourd'hui",
+  "recommandations": [
+    {{
+      "titre": "Action concrète courte",
+      "detail": "Explication pratique en 1-2 phrases — quand agir, pourquoi, comment",
+      "urgence": "haute" ou "normale" ou "basse"
+    }}
+  ],
+  "opportunites": [
+    "Opportunité concrète en 1 phrase"
+  ],
+  "risques": [
+    "Risque concret en 1 phrase à surveiller"
+  ],
+  "actualites": [
+    {{
+      "titre": "Titre court de l'actualité",
+      "resume": "Résumé en 1-2 phrases et son impact pour cet exploitant",
+      "source": "Nom du site source",
+      "url": "URL ou null",
+      "importance": "haute" ou "normale"
+    }}
+  ],
+  "horodatage": "{today}"
+}}
+
+Règles :
+- Les prix doivent être ceux de MATIF/Euronext (marché européen, en €/t) si disponibles dans les sources
+- Inclure les prix pour TOUTES les cultures du profil + blé/maïs/colza comme référence
+- 3 à 5 recommandations concrètes et actionnables immédiatement
+- 2 à 4 opportunités et 2 à 4 risques
+- 3 à 6 actualités récentes pertinentes pour ce profil
+- Adapter le ton à un agriculteur, pas à un financier"""
+
+
+def build_recherche_prompt(question: str, cultures: List[str], search_results: List[dict]) -> str:
+    """Prompt pour la recherche libre."""
+    today = datetime.date.today().strftime("%d/%m/%Y")
+    cultures_labels = [CULTURE_LABELS.get(c, c.replace("_", " ")) for c in cultures]
+
+    snippets = []
+    for r in search_results[:10]:
+        title   = r.get("title", "")
+        content = r.get("content", "")[:600]
+        url     = r.get("url", "")
+        snippets.append(f"[{title}]\n{content}\nURL: {url}")
+    tavily_block = "\n\n---\n".join(snippets) if snippets else "Aucune source trouvée."
+
+    profile_ctx = f"Cultures : {', '.join(cultures_labels)}" if cultures_labels else ""
+
+    return f"""Tu es un expert agricole et analyste de marché pour les agriculteurs français.
+Date : {today}
+{profile_ctx}
+
+## Question de l'agriculteur
+{question}
+
+## Sources trouvées (Tavily)
+{tavily_block}
+
+## Ta mission
+Réponds à la question de manière claire, concrète et utile pour un agriculteur.
+Retourne UN OBJET JSON UNIQUE :
+
+{{
+  "reponse": "Réponse complète, structurée, en texte libre (peut contenir des sauts de ligne \\n). Min 150 mots, max 400 mots. Concret, chiffré si possible, actionnable.",
+  "points_cles": ["Point clé 1", "Point clé 2", "Point clé 3"],
+  "sources_utilisees": ["nom source 1", "nom source 2"]
+}}
+
+IMPORTANT : retourne UNIQUEMENT le JSON, sans texte avant ni après."""
+
+
+async def call_gemini_json(prompt: str) -> dict:
+    """Appelle Gemini et retourne un objet JSON (dict)."""
+    if not GOOGLE_API_KEY:
+        raise HTTPException(status_code=503, detail="Clé API Google manquante")
+
+    models_to_try = [
+        "models/gemini-2.0-flash",
+        "models/gemini-1.5-flash",
+        "models/gemini-flash-latest",
+    ]
+    last_error = ""
+
+    for model_name in models_to_try:
+        try:
+            model = genai.GenerativeModel(
+                model_name=model_name,
+                generation_config=genai.GenerationConfig(temperature=0.25, max_output_tokens=4096),
+            )
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(None, lambda: model.generate_content(prompt))
+            raw = response.text.strip()
+
+            # Nettoyage des balises markdown si présentes
+            if raw.startswith("```"):
+                raw = raw.split("\n", 1)[-1]
+                raw = raw.rsplit("```", 1)[0].strip()
+
+            # Extraction de l'objet JSON
+            start = raw.find("{")
+            end   = raw.rfind("}") + 1
+            if start != -1 and end > start:
+                return json.loads(raw[start:end])
+
+        except Exception as e:
+            last_error = str(e)
+            print(f"❌ {model_name} : {last_error}")
+            continue
+
+    raise HTTPException(status_code=502, detail=f"Échec IA : {last_error}")
+
+
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @app.get("/")
@@ -293,6 +557,81 @@ async def get_subvention_suggestions(profile: ProfilePayload):
 
     return validated
 
+
+# ─── Endpoint Marchés : analyse personnalisée ─────────────────────────────────
+
+@app.post("/marche/analyse", response_model=MarcheAnalyse)
+async def get_marche_analyse(req: MarcheRequest):
+    """
+    Analyse de marché personnalisée :
+    1. Recherches Tavily : prix MATIF, intrants, actualités, débouchés
+    2. Gemini génère une analyse structurée avec prix, recommandations, risques
+    """
+    async with httpx.AsyncClient() as client:
+        queries = build_marche_queries(req)
+        tasks   = [tavily_search(q, client) for q in queries]
+        results_nested = await asyncio.gather(*tasks)
+
+    seen, search_results = set(), []
+    for batch in results_nested:
+        for r in batch:
+            url = r.get("url", "")
+            if url not in seen:
+                seen.add(url)
+                search_results.append(r)
+
+    prompt = build_marche_prompt(req, search_results)
+    data   = await call_gemini_json(prompt)
+
+    today = datetime.date.today().strftime("%d/%m/%Y")
+
+    return MarcheAnalyse(
+        prix            = [PrixCulture(**p) for p in data.get("prix", [])],
+        synthese        = data.get("synthese", ""),
+        recommandations = [Recommandation(**r) for r in data.get("recommandations", [])],
+        opportunites    = data.get("opportunites", []),
+        risques         = data.get("risques", []),
+        actualites      = [Actualite(**a) for a in data.get("actualites", [])],
+        horodatage      = data.get("horodatage", today),
+    )
+
+
+# ─── Endpoint Marchés : recherche libre ──────────────────────────────────────
+
+@app.post("/marche/recherche", response_model=RechercheResultat)
+async def recherche_marche(req: RechercheRequest):
+    """
+    Recherche libre : l'agriculteur pose n'importe quelle question
+    (prix d'un intrant, comparaison concurrents, tendance export, etc.)
+    """
+    async with httpx.AsyncClient() as client:
+        cultures_ctx = " ".join([CULTURE_LABELS.get(c, c) for c in (req.cultures or [])])
+        enriched_q   = f"{req.question} {cultures_ctx} France agriculteur".strip()
+        tasks = [
+            tavily_search(enriched_q, client),
+            tavily_search(req.question + " prix marché 2025", client),
+        ]
+        results_nested = await asyncio.gather(*tasks)
+
+    seen, search_results = set(), []
+    for batch in results_nested:
+        for r in batch:
+            url = r.get("url", "")
+            if url not in seen:
+                seen.add(url)
+                search_results.append(r)
+
+    prompt = build_recherche_prompt(req.question, req.cultures or [], search_results)
+    data   = await call_gemini_json(prompt)
+
+    sources_raw = [{"titre": r.get("title", ""), "url": r.get("url", "")} for r in search_results[:5]]
+
+    return RechercheResultat(
+        question   = req.question,
+        reponse    = data.get("reponse", ""),
+        sources    = sources_raw,
+        horodatage = datetime.date.today().strftime("%d/%m/%Y"),
+    )
 
 
 '''

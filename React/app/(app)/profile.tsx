@@ -10,7 +10,7 @@
  */
 import { useState } from 'react';
 import {
-  ScrollView, StyleSheet, Text,
+  ActivityIndicator, ScrollView, StyleSheet, Text,
   TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -119,7 +119,8 @@ export default function ProfileScreen() {
           <Text style={s.headerTitle}>Mon profil</Text>
         </View>
         <View style={s.center}>
-          <Text style={s.muted}>Chargement…</Text>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={s.muted}>Chargement du profil…</Text>
         </View>
       </View>
     );

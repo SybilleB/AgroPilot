@@ -1,9 +1,9 @@
 /**
  * app/(app)/subventions.tsx — Aide à la subvention par IA
  */
-import { useState, useEffect } from 'react'; // Ajout de useEffect
+import { useState, useEffect, useRef } from 'react';
 import {
-  ActivityIndicator, Linking, ScrollView, StyleSheet,
+  Animated, ActivityIndicator, Linking, ScrollView, StyleSheet,
   Text, TouchableOpacity, View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import du cache
@@ -89,6 +89,45 @@ export default function SubventionsScreen() {
   const [cards, setCards] = useState<SubventionCard[] | null>(null);
   const [analysing, setAnalysing] = useState(false);
   const [error, setError] = useState('');
+
+  // ── Barre de progression ──────────────────────────────────────────────────────
+  const progressAnim  = useRef(new Animated.Value(0)).current;
+  const [progressLabel, setProgressLabel] = useState('');
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const STEPS = [
+    { at: 400,  to: 0.12, label: 'Lecture de votre profil…' },
+    { at: 1400, to: 0.35, label: 'Recherche des aides PAC 2024-2025…' },
+    { at: 3000, to: 0.58, label: 'Analyse des aides régionales…' },
+    { at: 5000, to: 0.78, label: 'Calcul de vos éligibilités…' },
+    { at: 7500, to: 0.90, label: 'Finalisation des résultats…' },
+  ];
+
+  useEffect(() => {
+    if (analysing) {
+      progressAnim.setValue(0);
+      setProgressLabel('Initialisation…');
+      timersRef.current = STEPS.map(s =>
+        setTimeout(() => {
+          setProgressLabel(s.label);
+          Animated.timing(progressAnim, {
+            toValue: s.to,
+            duration: 700,
+            useNativeDriver: false,
+          }).start();
+        }, s.at)
+      );
+    } else {
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
+      Animated.timing(progressAnim, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: false,
+      }).start(() => setTimeout(() => progressAnim.setValue(0), 600));
+    }
+    return () => { timersRef.current.forEach(clearTimeout); };
+  }, [analysing]);
 
   // 1. CHARGEMENT DU CACHE AU DÉMARRAGE
   useEffect(() => {
@@ -193,9 +232,37 @@ export default function SubventionsScreen() {
 
       {analysing && (
         <View style={s.loadingBox}>
-          <ActivityIndicator size="large" color={Colors.primary} style={{ marginBottom: 24 }} />
-          <Text style={s.loadingTitle}>Analyse en cours…</Text>
-          <Text style={s.loadingNote}>L'IA croise les données PAC et Régionales...</Text>
+          <Text style={s.loadingTitle}>Analyse IA en cours…</Text>
+          <Text style={s.loadingLabel}>{progressLabel}</Text>
+
+          {/* Barre de progression */}
+          <View style={s.progressTrack}>
+            <Animated.View style={[s.progressFill, {
+              width: progressAnim.interpolate({
+                inputRange:  [0, 1],
+                outputRange: ['0%', '100%'],
+              }),
+            }]} />
+          </View>
+
+          {/* Étapes */}
+          <View style={s.stepsRow}>
+            {STEPS.map((step, i) => (
+              <View key={i} style={s.stepDot}>
+                <Animated.View style={[s.stepDotInner, {
+                  backgroundColor: progressAnim.interpolate({
+                    inputRange:  [Math.max(0, step.to - 0.01), step.to],
+                    outputRange: [Colors.border, Colors.primary],
+                    extrapolate: 'clamp',
+                  }),
+                }]} />
+              </View>
+            ))}
+          </View>
+
+          <Text style={s.loadingNote}>
+            Gemini analyse vos données en temps réel — cela prend environ 10 secondes
+          </Text>
         </View>
       )}
 
@@ -291,13 +358,36 @@ const s = StyleSheet.create({
   ctaBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
   // Loading
-  loadingBox: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 22 },
-  loadingTitle: { fontSize: 18, fontWeight: '700', color: Colors.primaryDark, marginBottom: 24 },
-  loadingSteps: { gap: 12, alignSelf: 'stretch', marginBottom: 20 },
-  loadingStep: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  loadingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary },
-  loadingStepText: { fontSize: 14, color: Colors.textMuted },
-  loadingNote: { fontSize: 12, color: Colors.textMuted, fontStyle: 'italic' },
+  loadingBox: {
+    marginHorizontal: 22,
+    marginTop: 8,
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    padding: 28,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  loadingTitle: { fontSize: 18, fontWeight: '800', color: Colors.primaryDark },
+  loadingLabel: { fontSize: 13, color: Colors.primary, fontWeight: '600', minHeight: 18 },
+  progressTrack: {
+    height: 8,
+    backgroundColor: Colors.primaryBg,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+    borderRadius: 4,
+  },
+  stepsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 2 },
+  stepDot: { alignItems: 'center' },
+  stepDotInner: { width: 8, height: 8, borderRadius: 4 },
+  loadingNote: { fontSize: 12, color: Colors.textMuted, lineHeight: 18 },
 
   // Error
   errorBox: { marginHorizontal: 22, backgroundColor: Colors.errorBg, borderRadius: 12, padding: 18, borderLeftWidth: 3, borderLeftColor: Colors.error, gap: 8 },
