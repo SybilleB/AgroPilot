@@ -29,11 +29,17 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="marche"
+        options={{
+          title: 'Marchés — AgroPilot',
+          tabBarLabel: 'Marchés',
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="chart.line.uptrend.xyaxis" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="rentabilite"
         options={{
-          title: 'Rentabilité — AgroPilot',
-          tabBarLabel: 'Rentabilité',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="chart.bar.fill" color={color} />,
+          href: null, // masqué de la tab bar, accessible via le dashboard
         }}
       />
       <Tabs.Screen

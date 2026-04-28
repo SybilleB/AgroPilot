@@ -11,7 +11,8 @@ export const API_ROUTES = {
   subventions: {
     suggestions: "/subventions/suggestions",
   },
-  marches: {
-    prix: "/marches/prix",
+  marche: {
+    analyse:   "/marche/analyse",
+    recherche: "/marche/recherche",
   },
 } as const;
