@@ -15,6 +15,7 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/Colors';
+import { Layout } from '@/constants/layout';
 
 // ─── Carte de fonctionnalité à venir ─────────────────────────────────────────
 
@@ -110,7 +111,7 @@ export default function RentabiliteScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:      { flex: 1, backgroundColor: Colors.background },
+  root: { flex: 1, backgroundColor: Colors.background },
   container: { paddingHorizontal: 0 },
 
   // Header
@@ -118,16 +119,16 @@ const s = StyleSheet.create({
     backgroundColor: Colors.headerBg,
     paddingHorizontal: 22,
     paddingBottom: 36,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderBottomLeftRadius: Layout.headerRadius,
+    borderBottomRightRadius: Layout.headerRadius,
     gap: 10,
     marginBottom: 24,
   },
   headerTitle: { fontSize: 26, fontWeight: '900', color: '#fff' },
-  headerSub:   { fontSize: 13, color: Colors.headerTextMuted, lineHeight: 20 },
-  devBadge:    { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 4 },
-  devDot:      { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.warning },
-  devBadgeText:{ fontSize: 12, color: Colors.warning, fontWeight: '600' },
+  headerSub: { fontSize: 13, color: Colors.headerTextMuted, lineHeight: 20 },
+  devBadge: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 4 },
+  devDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.warning },
+  devBadgeText: { fontSize: 12, color: Colors.warning, fontWeight: '600' },
 
   // Main block
   mainBlock: { paddingHorizontal: 22, marginBottom: 24 },
@@ -135,7 +136,7 @@ const s = StyleSheet.create({
   // AI card
   aiCard: {
     backgroundColor: Colors.aiCardBg,
-    borderRadius: 16,
+    borderRadius: Layout.cardRadius,
     borderLeftWidth: 4,
     borderLeftColor: Colors.aiCardBorder,
     padding: 20,
@@ -143,38 +144,34 @@ const s = StyleSheet.create({
   },
   aiLabel: { fontSize: 10, fontWeight: '700', color: Colors.primary, letterSpacing: 2, textTransform: 'uppercase' },
   aiTitle: { fontSize: 18, fontWeight: '800', color: Colors.primaryDark },
-  aiBody:  { fontSize: 14, color: Colors.textMuted, lineHeight: 21 },
+  aiBody: { fontSize: 14, color: Colors.textMuted, lineHeight: 21 },
 
   // Section
-  section:      { paddingHorizontal: 22, gap: 12, marginBottom: 24 },
+  section: { paddingHorizontal: 22, gap: 12, marginBottom: 24 },
   sectionLabel: { fontSize: 11, fontWeight: '700', color: Colors.primary, letterSpacing: 2, textTransform: 'uppercase' },
 
   // Coming soon cards
   comingCard: {
     backgroundColor: Colors.white,
-    borderRadius: 16,
+    borderRadius: Layout.cardRadius,
     padding: 18,
     gap: 7,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...Layout.softShadow,
   },
-  comingIconBox: { width: 42, height: 42, borderRadius: 12, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  comingIcon:    { fontSize: 20 },
-  comingTitle:   { fontSize: 15, fontWeight: '700', color: Colors.primaryDark },
-  comingDesc:    { fontSize: 13, color: Colors.textMuted, lineHeight: 19 },
+  comingIconBox: { width: 42, height: 42, borderRadius: Layout.inputRadius, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+  comingIcon: { fontSize: 20 },
+  comingTitle: { fontSize: 15, fontWeight: '700', color: Colors.primaryDark },
+  comingDesc: { fontSize: 13, color: Colors.textMuted, lineHeight: 19 },
 
   // Dev note
   devNote: {
     marginHorizontal: 22,
     backgroundColor: Colors.backgroundAlt,
-    borderRadius: 12,
+    borderRadius: Layout.cardRadius,
     padding: 16,
     gap: 8,
   },
   devNoteLabel: { fontSize: 10, fontWeight: '700', color: Colors.textMuted, letterSpacing: 1.5 },
-  devNoteText:  { fontSize: 12, color: Colors.textMuted, lineHeight: 19 },
-  devNoteCode:  { fontFamily: 'monospace', color: Colors.primaryDark, fontWeight: '600' },
+  devNoteText: { fontSize: 12, color: Colors.textMuted, lineHeight: 19 },
+  devNoteCode: { fontFamily: 'monospace', color: Colors.primaryDark, fontWeight: '600' },
 });

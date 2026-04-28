@@ -9,6 +9,7 @@
  */
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '@/constants/Colors';
+import { Layout } from '@/constants/layout';
 
 interface Option {
   value: string;
@@ -76,12 +77,12 @@ const styles = StyleSheet.create({
   pill: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: Layout.buttonRadius + 6,
     borderWidth: 1.5,
     borderColor: Colors.border,
     backgroundColor: Colors.white,
   },
   pillActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  pillText:       { fontSize: 13, color: Colors.textMuted, fontWeight: '500' },
+  pillText: { fontSize: 13, color: Colors.textMuted, fontWeight: '500' },
   pillTextActive: { color: '#fff', fontWeight: '600' },
 });

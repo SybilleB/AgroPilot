@@ -21,20 +21,21 @@ import { logout, changeEmail, changePassword } from '@/services/auth.service';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/Colors';
+import { Layout } from '@/constants/layout';
 
 // ─── Labels lisibles ──────────────────────────────────────────────────────────
 
 const TYPE_LABELS: Record<string, string> = {
   grandes_cultures: 'Grandes cultures', elevage_bovin: 'Élevage bovin',
-  elevage_porcin:   'Élevage porcin',   elevage_avicole: 'Élevage avicole',
-  viticulture:      'Viticulture',      maraichage: 'Maraîchage',
-  arboriculture:    'Arboriculture',    mixte: 'Mixte',
+  elevage_porcin: 'Élevage porcin', elevage_avicole: 'Élevage avicole',
+  viticulture: 'Viticulture', maraichage: 'Maraîchage',
+  arboriculture: 'Arboriculture', mixte: 'Mixte',
 };
 
 const METHODE_LABELS: Record<string, string> = {
   conventionnelle: 'Conventionnelle', raisonnee: 'Raisonnée',
-  hve:             'HVE',            bio: 'Agriculture biologique',
-  biodynamie:      'Biodynamie',
+  hve: 'HVE', bio: 'Agriculture biologique',
+  biodynamie: 'Biodynamie',
 };
 
 // ─── Ligne d'information ──────────────────────────────────────────────────────
@@ -49,7 +50,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 const rs = StyleSheet.create({
-  row:   { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: Colors.border },
   label: { fontSize: 13, color: Colors.textMuted, flex: 1 },
   value: { fontSize: 13, color: Colors.text, fontWeight: '600', flex: 2, textAlign: 'right' },
 });
@@ -62,25 +63,25 @@ export default function ProfileScreen() {
   const { user } = useAuth();
   const { fullProfile, loading } = useProfile();
 
-  const p       = fullProfile?.profile;
-  const e       = fullProfile?.exploitation;
+  const p = fullProfile?.profile;
+  const e = fullProfile?.exploitation;
   const cultures = fullProfile?.cultures ?? [];
 
-  const [securityOpen,  setSecurityOpen]  = useState<'email' | 'password' | null>(null);
+  const [securityOpen, setSecurityOpen] = useState<'email' | 'password' | null>(null);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
 
-  const [newEmail,      setNewEmail]      = useState('');
-  const [emailLoading,  setEmailLoading]  = useState(false);
-  const [emailMessage,  setEmailMessage]  = useState('');
-  const [emailError,    setEmailError]    = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailMessage, setEmailMessage] = useState('');
+  const [emailError, setEmailError] = useState('');
 
-  const [currentPwd,   setCurrentPwd]    = useState('');
-  const [newPwd,       setNewPwd]        = useState('');
-  const [confirmPwd,   setConfirmPwd]    = useState('');
-  const [pwdLoading,   setPwdLoading]    = useState(false);
-  const [pwdMessage,   setPwdMessage]    = useState('');
-  const [pwdError,     setPwdError]      = useState('');
+  const [currentPwd, setCurrentPwd] = useState('');
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
+  const [pwdLoading, setPwdLoading] = useState(false);
+  const [pwdMessage, setPwdMessage] = useState('');
+  const [pwdError, setPwdError] = useState('');
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -172,24 +173,24 @@ export default function ProfileScreen() {
       {/* ─── IDENTITÉ ────────────────────────────────────────────────────── */}
       <View style={s.sectionCard}>
         <Text style={s.sectionTitle}>Identité</Text>
-        <Row label="Nom complet"   value={p ? `${p.prenom} ${p.nom}` : '—'} />
-        <Row label="Email"         value={user?.email ?? '—'} />
-        {p?.phone              && <Row label="Téléphone"  value={p.phone} />}
-        <Row label="Naissance"     value={p?.date_naissance ? p.date_naissance.split('-')[0] : '—'} />
-        <Row label="Situation"     value={p?.situation_familiale ?? '—'} />
-        {p?.nb_enfants != null && <Row label="Enfants"    value={String(p.nb_enfants)} />}
+        <Row label="Nom complet" value={p ? `${p.prenom} ${p.nom}` : '—'} />
+        <Row label="Email" value={user?.email ?? '—'} />
+        {p?.phone && <Row label="Téléphone" value={p.phone} />}
+        <Row label="Naissance" value={p?.date_naissance ? p.date_naissance.split('-')[0] : '—'} />
+        <Row label="Situation" value={p?.situation_familiale ?? '—'} />
+        {p?.nb_enfants != null && <Row label="Enfants" value={String(p.nb_enfants)} />}
       </View>
 
       {/* ─── EXPLOITATION ────────────────────────────────────────────────── */}
       {e ? (
         <View style={s.sectionCard}>
           <Text style={s.sectionTitle}>Exploitation</Text>
-          {e.nom_exploitation   && <Row label="Nom"           value={e.nom_exploitation} />}
-          {e.commune            && <Row label="Commune"       value={`${e.commune}${e.code_postal ? ` (${e.code_postal})` : ''}`} />}
-          {e.departement        && <Row label="Département"   value={e.departement} />}
-          {e.surface_ha         && <Row label="Surface"       value={`${e.surface_ha} ha`} />}
-          {e.type_exploitation  && <Row label="Type"          value={TYPE_LABELS[e.type_exploitation] ?? e.type_exploitation} />}
-          {e.methode_production && <Row label="Méthode"       value={METHODE_LABELS[e.methode_production] ?? e.methode_production} />}
+          {e.nom_exploitation && <Row label="Nom" value={e.nom_exploitation} />}
+          {e.commune && <Row label="Commune" value={`${e.commune}${e.code_postal ? ` (${e.code_postal})` : ''}`} />}
+          {e.departement && <Row label="Département" value={e.departement} />}
+          {e.surface_ha && <Row label="Surface" value={`${e.surface_ha} ha`} />}
+          {e.type_exploitation && <Row label="Type" value={TYPE_LABELS[e.type_exploitation] ?? e.type_exploitation} />}
+          {e.methode_production && <Row label="Méthode" value={METHODE_LABELS[e.methode_production] ?? e.methode_production} />}
           {e.certifications?.length ? <Row label="Certifications" value={e.certifications.join(', ').toUpperCase()} /> : null}
         </View>
       ) : (
@@ -236,8 +237,8 @@ export default function ProfileScreen() {
               {'\n'}Un lien de confirmation sera envoyé à la nouvelle adresse.
             </Text>
             <Input label="Nouvel email" placeholder="nouveau@ferme.fr" value={newEmail} onChangeText={setNewEmail} keyboardType="email-address" autoCapitalize="none" />
-            {emailError   ? <Text style={s.errTxt}>{emailError}</Text>   : null}
-            {emailMessage ? <Text style={s.okTxt}>{emailMessage}</Text>  : null}
+            {emailError ? <Text style={s.errTxt}>{emailError}</Text> : null}
+            {emailMessage ? <Text style={s.okTxt}>{emailMessage}</Text> : null}
             <Button onPress={handleChangeEmail} loading={emailLoading}>Envoyer le lien de confirmation</Button>
           </View>
         )}
@@ -255,11 +256,11 @@ export default function ProfileScreen() {
 
         {securityOpen === 'password' && (
           <View style={s.secForm}>
-            <Input label="Mot de passe actuel"          placeholder="••••••••" value={currentPwd} onChangeText={setCurrentPwd} secureTextEntry />
-            <Input label="Nouveau mot de passe"         placeholder="••••••••" value={newPwd}     onChangeText={setNewPwd}     secureTextEntry />
+            <Input label="Mot de passe actuel" placeholder="••••••••" value={currentPwd} onChangeText={setCurrentPwd} secureTextEntry />
+            <Input label="Nouveau mot de passe" placeholder="••••••••" value={newPwd} onChangeText={setNewPwd} secureTextEntry />
             <Input label="Confirmer le nouveau mot de passe" placeholder="••••••••" value={confirmPwd} onChangeText={setConfirmPwd} secureTextEntry />
-            {pwdError   ? <Text style={s.errTxt}>{pwdError}</Text>   : null}
-            {pwdMessage ? <Text style={s.okTxt}>{pwdMessage}</Text>  : null}
+            {pwdError ? <Text style={s.errTxt}>{pwdError}</Text> : null}
+            {pwdMessage ? <Text style={s.okTxt}>{pwdMessage}</Text> : null}
             <Button onPress={handleChangePassword} loading={pwdLoading}>Mettre à jour le mot de passe</Button>
           </View>
         )}
@@ -293,71 +294,67 @@ export default function ProfileScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:      { flex: 1, backgroundColor: Colors.background },
+  root: { flex: 1, backgroundColor: Colors.background },
   container: { paddingHorizontal: 0 },
-  loadScreen:{ flex: 1, backgroundColor: Colors.background },
-  center:    { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
-  muted:     { fontSize: 14, color: Colors.textMuted, textAlign: 'center', paddingVertical: 8 },
+  loadScreen: { flex: 1, backgroundColor: Colors.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
+  muted: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', paddingVertical: 8 },
 
   // Header
   header: {
     backgroundColor: Colors.headerBg,
     paddingHorizontal: 22,
     paddingBottom: 32,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderBottomLeftRadius: Layout.headerRadius,
+    borderBottomRightRadius: Layout.headerRadius,
     gap: 18,
     marginBottom: 22,
   },
   headerTitle: { fontSize: 22, fontWeight: '800', color: '#fff' },
-  headerSub:   { fontSize: 12, color: Colors.headerTextMuted, marginTop: 2 },
+  headerSub: { fontSize: 12, color: Colors.headerTextMuted, marginTop: 2 },
 
   // Avatar
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  avatar:    { width: 54, height: 54, borderRadius: 27, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  avatarText:{ fontSize: 20, fontWeight: '800', color: '#fff' },
+  avatar: { width: 54, height: 54, borderRadius: Layout.cardRadius + 11, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 20, fontWeight: '800', color: '#fff' },
 
   // Exploit summary
-  exploitRow:    { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 14, paddingVertical: 14 },
-  exploitBox:    { flex: 1, alignItems: 'center' },
-  exploitVal:    { fontSize: 15, fontWeight: '800', color: '#fff' },
-  exploitLabel:  { fontSize: 10, color: Colors.headerTextMuted, marginTop: 2 },
-  exploitDivider:{ width: 1, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', height: 24 },
+  exploitRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 14, paddingVertical: 14 },
+  exploitBox: { flex: 1, alignItems: 'center' },
+  exploitVal: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  exploitLabel: { fontSize: 10, color: Colors.headerTextMuted, marginTop: 2 },
+  exploitDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', height: 24 },
 
   // Section cards
   sectionCard: {
     marginHorizontal: 22,
     marginBottom: 14,
     backgroundColor: Colors.white,
-    borderRadius: 16,
+    borderRadius: Layout.cardRadius,
     padding: 18,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...Layout.cardShadow,
   },
-  sectionTitle:{ fontSize: 11, fontWeight: '700', color: Colors.primaryDark, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionTitle: { fontSize: 11, fontWeight: '700', color: Colors.primaryDark, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
 
   // Config btn
-  configBtn:    { marginTop: 14, backgroundColor: Colors.primaryBg, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  configBtnText:{ color: Colors.primary, fontSize: 14, fontWeight: '700' },
+  configBtn: { marginTop: 14, backgroundColor: Colors.primaryBg, borderRadius: Layout.inputRadius, paddingVertical: 12, alignItems: 'center' },
+  configBtnText: { color: Colors.primary, fontSize: 14, fontWeight: '700' },
 
   // Security
-  secRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11 },
-  secLabel:   { fontSize: 14, color: Colors.text, fontWeight: '500' },
+  secRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11 },
+  secLabel: { fontSize: 14, color: Colors.text, fontWeight: '500' },
   secChevron: { fontSize: 16, color: Colors.textMuted },
-  secForm:    { paddingTop: 14, gap: 4 },
-  secHint:    { fontSize: 12, color: Colors.textMuted, lineHeight: 18, marginBottom: 12 },
-  secHintBold:{ fontWeight: '600', color: Colors.text },
-  divider:    { height: 1, backgroundColor: Colors.border, marginVertical: 2 },
-  errTxt:     { fontSize: 13, color: Colors.error, marginBottom: 6 },
-  okTxt:      { fontSize: 13, color: Colors.success, marginBottom: 6, lineHeight: 18 },
+  secForm: { paddingTop: 14, gap: 4 },
+  secHint: { fontSize: 12, color: Colors.textMuted, lineHeight: 18, marginBottom: 12 },
+  secHintBold: { fontWeight: '600', color: Colors.text },
+  divider: { height: 1, backgroundColor: Colors.border, marginVertical: 2 },
+  errTxt: { fontSize: 13, color: Colors.error, marginBottom: 6 },
+  okTxt: { fontSize: 13, color: Colors.success, marginBottom: 6, lineHeight: 18 },
 
   // Actions
-  actionsBlock:    { paddingHorizontal: 22, gap: 10, marginTop: 4 },
-  logoutConfirm:   { backgroundColor: Colors.errorBg, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#FFCDD2', gap: 12 },
-  logoutConfirmText:{ fontSize: 14, fontWeight: '600', color: Colors.errorDark, textAlign: 'center' },
+  actionsBlock: { paddingHorizontal: 22, gap: 10, marginTop: 4 },
+  logoutConfirm: { backgroundColor: Colors.errorBg, borderRadius: Layout.cardRadius, padding: 16, borderWidth: 1, borderColor: '#FFCDD2', gap: 12 },
+  logoutConfirmText: { fontSize: 14, fontWeight: '600', color: Colors.errorDark, textAlign: 'center' },
   logoutConfirmRow: { flexDirection: 'row', gap: 8 },
-  halfBtn:          { flex: 1 },
+  halfBtn: { flex: 1 },
 });

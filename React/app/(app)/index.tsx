@@ -8,6 +8,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfile } from '@/hooks/useProfile';
 import { Colors } from '@/constants/Colors';
+import { Layout } from '@/constants/layout';
 
 // ─── Composant Widget Météo ───────────────────────────────────
 
@@ -199,8 +200,8 @@ const s = StyleSheet.create({
     backgroundColor: '#39811c', // VERT FONCÉ D'ORIGINE
     paddingHorizontal: 22,
     paddingBottom: 32,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderBottomLeftRadius: Layout.headerRadius,
+    borderBottomRightRadius: Layout.headerRadius,
     marginBottom: 22,
   },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
@@ -222,9 +223,9 @@ const s = StyleSheet.create({
     marginHorizontal: 22,
     marginBottom: 20,
     backgroundColor: '#FFF',
-    borderRadius: 20,
+    borderRadius: Layout.cardRadius,
     padding: 20,
-    elevation: 4,
+    ...Layout.cardShadow,
   },
   meteoMain: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   meteoCity: { fontSize: 14, fontWeight: '600', color: '#666', textTransform: 'uppercase' },
@@ -244,7 +245,7 @@ const s = StyleSheet.create({
   subArrow: { fontSize: 18, color: '#39811c', fontWeight: '700' },
 
   sectionLabel: { marginHorizontal: 22, marginBottom: 12, fontSize: 11, fontWeight: '700', color: '#2E5A1C', letterSpacing: 2 },
-  navCard: { marginHorizontal: 22, marginBottom: 10, backgroundColor: '#fff', borderRadius: 16, padding: 18, flexDirection: 'row', alignItems: 'center', elevation: 2 },
+  navCard: { marginHorizontal: 22, marginBottom: 10, backgroundColor: '#fff', borderRadius: Layout.cardRadius, padding: 18, flexDirection: 'row', alignItems: 'center', ...Layout.softShadow },
   navCardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 14 },
   navIconBox: { width: 48, height: 48, borderRadius: 14, backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center' },
   navIcon: { fontSize: 22 },

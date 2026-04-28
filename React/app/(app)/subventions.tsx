@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProfile } from '@/hooks/useProfile';
 import { fetchSubventionSuggestions, SubventionCard } from '@/services/subventions.service';
 import { Colors } from '@/constants/Colors';
+import { Layout } from '@/constants/layout';
 
 // Clé unique pour le stockage local
 const CACHE_KEY = 'agropilot_subventions_cache';
@@ -242,8 +243,8 @@ const s = StyleSheet.create({
     backgroundColor: Colors.headerBg,
     paddingHorizontal: 22,
     paddingBottom: 32,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderBottomLeftRadius: Layout.headerRadius,
+    borderBottomRightRadius: Layout.headerRadius,
     gap: 10,
     marginBottom: 22,
   },
@@ -254,7 +255,7 @@ const s = StyleSheet.create({
   tagText: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.8)' },
 
   // Warning
-  warningBox: { marginHorizontal: 22, marginBottom: 18, backgroundColor: Colors.warningBg, borderRadius: 12, padding: 16, borderLeftWidth: 3, borderLeftColor: Colors.warning },
+  warningBox: { marginHorizontal: 22, marginBottom: 18, backgroundColor: Colors.warningBg, borderRadius: Layout.cardRadius, padding: 16, borderLeftWidth: 3, borderLeftColor: Colors.warning },
   warningText: { fontSize: 13, color: '#7B5800', lineHeight: 19 },
 
   // CTA block
@@ -263,7 +264,7 @@ const s = StyleSheet.create({
   // Bloc IA
   aiCard: {
     backgroundColor: Colors.aiCardBg,
-    borderRadius: 16,
+    borderRadius: Layout.cardRadius,
     borderLeftWidth: 4,
     borderLeftColor: Colors.aiCardBorder,
     padding: 20,
@@ -274,7 +275,7 @@ const s = StyleSheet.create({
   aiBody: { fontSize: 14, color: Colors.textMuted, lineHeight: 20 },
 
   // Steps
-  stepsBlock: { backgroundColor: Colors.white, borderRadius: 16, padding: 20, gap: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+  stepsBlock: { backgroundColor: Colors.white, borderRadius: Layout.cardRadius, padding: 20, gap: 14, ...Layout.softShadow },
   stepsTitle: { fontSize: 14, fontWeight: '700', color: Colors.primaryDark, marginBottom: 2 },
   step: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   stepNum: { width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
@@ -296,7 +297,7 @@ const s = StyleSheet.create({
   loadingNote: { fontSize: 12, color: Colors.textMuted, fontStyle: 'italic' },
 
   // Error
-  errorBox: { marginHorizontal: 22, backgroundColor: Colors.errorBg, borderRadius: 12, padding: 18, borderLeftWidth: 3, borderLeftColor: Colors.error, gap: 8 },
+  errorBox: { marginHorizontal: 22, backgroundColor: Colors.errorBg, borderRadius: Layout.cardRadius, padding: 18, borderLeftWidth: 3, borderLeftColor: Colors.error, gap: 8 },
   errorTitle: { fontSize: 15, fontWeight: '700', color: Colors.errorDark },
   errorText: { fontSize: 13, color: Colors.errorDark, lineHeight: 19 },
   retryBtn: { alignSelf: 'flex-start', backgroundColor: Colors.error, borderRadius: 8, paddingVertical: 9, paddingHorizontal: 18, marginTop: 4 },
@@ -307,25 +308,21 @@ const s = StyleSheet.create({
   resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
   resultsTitle: { fontSize: 18, fontWeight: '800', color: Colors.primaryDark },
   resultsHint: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
-  refreshBtn: { backgroundColor: Colors.primaryBg, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14 },
+  refreshBtn: { backgroundColor: Colors.primaryBg, borderRadius: Layout.buttonRadius, paddingVertical: 8, paddingHorizontal: 14 },
   refreshBtnText: { fontSize: 13, color: Colors.primary, fontWeight: '700' },
   disclaimer: { fontSize: 11, color: Colors.textMuted, marginTop: 20, lineHeight: 17, fontStyle: 'italic', textAlign: 'center' },
 
   // Card subvention
   card: {
     backgroundColor: Colors.white,
-    borderRadius: 16,
+    borderRadius: Layout.cardRadius,
     padding: 18,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    ...Layout.cardShadow,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  catBadge: { borderRadius: 20, paddingVertical: 3, paddingHorizontal: 10 },
+  catBadge: { borderRadius: Layout.buttonRadius + 6, paddingVertical: 3, paddingHorizontal: 10 },
   catBadgeText: { fontSize: 11, fontWeight: '700' },
   scoreDots: { flexDirection: 'row', gap: 3 },
   scoreDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.border },
@@ -338,8 +335,8 @@ const s = StyleSheet.create({
   cardDivider: { height: 1, backgroundColor: Colors.border, marginBottom: 14 },
   cardSectionLabel: { fontSize: 11, fontWeight: '700', color: Colors.primaryDark, marginBottom: 6, marginTop: 12, letterSpacing: 0.5, textTransform: 'uppercase' },
   cardText: { fontSize: 13, color: Colors.text, lineHeight: 20 },
-  eligibleBlock: { backgroundColor: Colors.primaryBg, borderRadius: 10, padding: 12 },
+  eligibleBlock: { backgroundColor: Colors.primaryBg, borderRadius: Layout.inputRadius, padding: 12 },
   cardTextEligible: { fontSize: 13, color: Colors.primaryDark, lineHeight: 20 },
-  cardLink: { marginTop: 14, backgroundColor: Colors.primaryBg, borderRadius: 12, padding: 13, alignItems: 'center' },
+  cardLink: { marginTop: 14, backgroundColor: Colors.primaryBg, borderRadius: Layout.inputRadius, padding: 13, alignItems: 'center' },
   cardLinkText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
 });

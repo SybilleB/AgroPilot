@@ -32,7 +32,7 @@ export function Button({
         styles.base,
         variant === 'primary' && styles.primary,
         variant === 'outline' && styles.outline,
-        variant === 'ghost'   && styles.ghost,
+        variant === 'ghost' && styles.ghost,
         isDisabled && styles.disabled,
         style,
       ]}
@@ -43,13 +43,13 @@ export function Button({
       {loading
         ? <ActivityIndicator color={variant === 'primary' ? '#fff' : Colors.primary} />
         : <Text style={[
-            styles.label,
-            variant === 'primary' && styles.labelPrimary,
-            variant === 'outline' && styles.labelOutline,
-            variant === 'ghost'   && styles.labelGhost,
-          ]}>
-            {children}
-          </Text>
+          styles.label,
+          variant === 'primary' && styles.labelPrimary,
+          variant === 'outline' && styles.labelOutline,
+          variant === 'ghost' && styles.labelGhost,
+        ]}>
+          {children}
+        </Text>
       }
     </TouchableOpacity>
   );
@@ -66,10 +66,10 @@ const styles = StyleSheet.create({
   },
   primary: { backgroundColor: Colors.primary },
   outline: { borderWidth: 1.5, borderColor: Colors.primary, backgroundColor: 'transparent' },
-  ghost:   { backgroundColor: 'transparent' },
+  ghost: { backgroundColor: 'transparent' },
   disabled: { opacity: 0.5 },
-  label:        { fontSize: 15, fontWeight: '600' },
+  label: { fontSize: 15, fontWeight: '600' },
   labelPrimary: { color: '#fff' },
   labelOutline: { color: Colors.primary },
-  labelGhost:   { color: Colors.primary },
+  labelGhost: { color: Colors.primary },
 });

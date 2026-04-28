@@ -3,6 +3,7 @@
  */
 import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 import { Colors } from '@/constants/Colors';
+import { Layout } from '@/constants/layout';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -24,11 +25,11 @@ export function Input({ label, error, style, ...props }: InputProps) {
 }
 
 const styles = StyleSheet.create({
-  wrapper:    { marginBottom: 16 },
-  label:      { fontSize: 13, fontWeight: '600', color: Colors.text, marginBottom: 6 },
+  wrapper: { marginBottom: 16 },
+  label: { fontSize: 13, fontWeight: '600', color: Colors.text, marginBottom: 6 },
   input: {
     backgroundColor: Colors.background,
-    borderRadius: 10,
+    borderRadius: Layout.inputRadius,
     borderWidth: 1,
     borderColor: Colors.border,
     paddingHorizontal: 14,
@@ -37,5 +38,5 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   inputError: { borderColor: Colors.error },
-  error:      { fontSize: 12, color: Colors.error, marginTop: 4 },
+  error: { fontSize: 12, color: Colors.error, marginTop: 4 },
 });

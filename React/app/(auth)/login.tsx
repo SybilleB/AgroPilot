@@ -13,16 +13,17 @@ import { login } from '@/services/auth.service';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/Colors';
+import { Layout } from '@/constants/layout';
 
 export default function LoginScreen() {
   const { session } = useAuth();
-  const router      = useRouter();
-  const insets      = useSafeAreaInsets();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
 
-  const [email,    setEmail]    = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   if (session) return <Redirect href="/(app)" />;
 
@@ -115,48 +116,44 @@ export default function LoginScreen() {
 }
 
 const s = StyleSheet.create({
-  root:      { flex: 1, backgroundColor: Colors.background },
+  root: { flex: 1, backgroundColor: Colors.background },
   container: { flexGrow: 1, paddingBottom: 48 },
 
   // Header
   header: {
     backgroundColor: Colors.headerBg,
-    paddingHorizontal: 26,
-    paddingBottom: 44,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    borderBottomLeftRadius: Layout.headerRadius,
+    borderBottomRightRadius: Layout.headerRadius,
     gap: 14,
   },
-  logoRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
   logoSquare: { width: 42, height: 42, borderRadius: 12, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   logoLetter: { fontSize: 22, fontWeight: '900', color: '#fff' },
-  logoName:   { fontSize: 18, fontWeight: '800', color: '#fff' },
-  logoTagline:{ fontSize: 9, color: Colors.headerTextMuted, letterSpacing: 2.5, marginTop: 1 },
-  heroTitle:  { fontSize: 28, fontWeight: '900', color: '#fff' },
-  heroSub:    { fontSize: 14, color: Colors.headerTextMuted, lineHeight: 21 },
+  logoName: { fontSize: 18, fontWeight: '800', color: '#fff' },
+  logoTagline: { fontSize: 9, color: Colors.headerTextMuted, letterSpacing: 2.5, marginTop: 1 },
+  heroTitle: { fontSize: 28, fontWeight: '900', color: '#fff' },
+  heroSub: { fontSize: 14, color: Colors.headerTextMuted, lineHeight: 21 },
 
   // Form card
   formBlock: {
     marginTop: 28,
     marginHorizontal: 22,
     backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: Layout.cardRadius,
+    padding: 22,
     gap: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.07,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    ...Layout.cardShadow,
   },
-  errorBox:  { backgroundColor: Colors.errorBg, borderRadius: 10, padding: 14, marginBottom: 6, borderLeftWidth: 3, borderLeftColor: Colors.error },
+  errorBox: { backgroundColor: Colors.errorBg, borderRadius: 10, padding: 14, marginBottom: 6, borderLeftWidth: 3, borderLeftColor: Colors.error },
   errorText: { color: Colors.errorDark, fontSize: 13, lineHeight: 19 },
   submitBtn: { marginTop: 20 },
   forgotRow: { alignItems: 'center', paddingTop: 10 },
-  forgotText:{ fontSize: 13, color: Colors.textMuted },
+  forgotText: { fontSize: 13, color: Colors.textMuted },
 
   // Footer
-  footer:    { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 28 },
-  footerText:{ color: Colors.textMuted, fontSize: 14 },
-  footerLink:{ color: Colors.primary, fontSize: 14, fontWeight: '700' },
+  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 24 },
+  footerText: { color: Colors.textMuted, fontSize: 14 },
+  footerLink: { color: Colors.primary, fontSize: 14, fontWeight: '700' },
 });

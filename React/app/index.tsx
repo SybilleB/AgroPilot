@@ -7,6 +7,7 @@ import { ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/Colors';
+import { Layout } from '@/constants/layout';
 
 // ─── Carte fonctionnalité ─────────────────────────────────────────────────────
 
@@ -162,34 +163,34 @@ export default function LandingScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:      { flex: 1, backgroundColor: Colors.background },
+  root: { flex: 1, backgroundColor: Colors.background },
   container: { flexGrow: 1 },
 
   // Hero
   hero: {
     backgroundColor: Colors.headerBg,
-    paddingHorizontal: 26,
-    paddingBottom: 48,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    borderBottomLeftRadius: Layout.headerRadius,
+    borderBottomRightRadius: Layout.headerRadius,
     gap: 16,
   },
 
   // Logo
-  logoRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
-  logoSquare: { width: 46, height: 46, borderRadius: 13, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
+  logoSquare: { width: 42, height: 42, borderRadius: 12, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   logoLetter: { fontSize: 24, fontWeight: '900', color: '#fff' },
-  logoName:   { fontSize: 20, fontWeight: '800', color: '#fff' },
-  logoTagline:{ fontSize: 9, color: Colors.headerTextMuted, letterSpacing: 2.5, marginTop: 1 },
+  logoName: { fontSize: 20, fontWeight: '800', color: '#fff' },
+  logoTagline: { fontSize: 9, color: Colors.headerTextMuted, letterSpacing: 2.5, marginTop: 1 },
 
   // Hero textes
-  heroTitle: { fontSize: 30, fontWeight: '900', color: '#fff', lineHeight: 37, marginTop: 4 },
-  heroSub:   { fontSize: 15, color: Colors.headerTextMuted, lineHeight: 23 },
+  heroTitle: { fontSize: 28, fontWeight: '900', color: '#fff', lineHeight: 35, marginTop: 4 },
+  heroSub: { fontSize: 15, color: Colors.headerTextMuted, lineHeight: 23 },
 
   // Boutons hero
-  btnPrimary:     { backgroundColor: '#fff', borderRadius: 14, paddingVertical: 17, alignItems: 'center', marginTop: 4 },
+  btnPrimary: { backgroundColor: '#fff', borderRadius: 14, paddingVertical: 17, alignItems: 'center', marginTop: 4 },
   btnPrimaryText: { fontSize: 16, fontWeight: '800', color: Colors.primaryDark },
-  btnSecondary:   { paddingVertical: 10, alignItems: 'center' },
+  btnSecondary: { paddingVertical: 10, alignItems: 'center' },
   btnSecondaryText: { fontSize: 15, color: Colors.headerTextMuted, fontWeight: '600' },
 
   // Stats card
@@ -199,42 +200,34 @@ const s = StyleSheet.create({
     backgroundColor: Colors.white,
     marginHorizontal: 20,
     marginTop: -20,
-    borderRadius: 16,
+    borderRadius: Layout.cardRadius,
     paddingVertical: 18,
     paddingHorizontal: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 6,
+    ...Layout.cardShadow,
   },
-  statBox:    { flex: 1, alignItems: 'center' },
-  statValue:  { fontSize: 22, fontWeight: '900', color: Colors.primaryDark },
-  statLabel:  { fontSize: 11, color: Colors.textMuted, marginTop: 2, textAlign: 'center' },
-  statDivider:{ width: 1, height: 34, backgroundColor: Colors.border },
+  statBox: { flex: 1, alignItems: 'center' },
+  statValue: { fontSize: 22, fontWeight: '900', color: Colors.primaryDark },
+  statLabel: { fontSize: 11, color: Colors.textMuted, marginTop: 2, textAlign: 'center' },
+  statDivider: { width: 1, height: 34, backgroundColor: Colors.border },
 
   // Sections
-  section:      { paddingHorizontal: 22, paddingTop: 38, gap: 14 },
-  sectionEyebrow:{ fontSize: 11, fontWeight: '700', color: Colors.primary, letterSpacing: 2, textTransform: 'uppercase' },
-  sectionTitle:  { fontSize: 23, fontWeight: '800', color: Colors.primaryDark, lineHeight: 29, marginTop: -2 },
-  sectionBody:   { fontSize: 15, color: Colors.textMuted, lineHeight: 23 },
+  section: { paddingHorizontal: 22, paddingTop: 38, gap: 14 },
+  sectionEyebrow: { fontSize: 11, fontWeight: '700', color: Colors.primary, letterSpacing: 2, textTransform: 'uppercase' },
+  sectionTitle: { fontSize: 23, fontWeight: '800', color: Colors.primaryDark, lineHeight: 29, marginTop: -2 },
+  sectionBody: { fontSize: 15, color: Colors.textMuted, lineHeight: 23 },
 
   // Feature cards
   featureCard: {
     backgroundColor: Colors.white,
-    borderRadius: 16,
+    borderRadius: Layout.cardRadius,
     padding: 20,
     gap: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...Layout.softShadow,
   },
-  featureIconBox:   { width: 46, height: 46, borderRadius: 13, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+  featureIconBox: { width: 42, height: 42, borderRadius: 12, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
   featureIconEmoji: { fontSize: 22 },
-  featureTitle:     { fontSize: 16, fontWeight: '700', color: Colors.primaryDark },
-  featureDesc:      { fontSize: 14, color: Colors.textMuted, lineHeight: 21 },
+  featureTitle: { fontSize: 16, fontWeight: '700', color: Colors.primaryDark },
+  featureDesc: { fontSize: 14, color: Colors.textMuted, lineHeight: 21 },
 
   // Promise block
   promiseBlock: {
@@ -248,11 +241,11 @@ const s = StyleSheet.create({
     gap: 10,
   },
   promiseTitle: { fontSize: 19, fontWeight: '800', color: Colors.primaryDark, lineHeight: 25 },
-  promiseBody:  { fontSize: 14, color: Colors.textMuted, lineHeight: 21 },
+  promiseBody: { fontSize: 14, color: Colors.textMuted, lineHeight: 21 },
 
   // Bottom CTA
-  bottomCta:  { paddingHorizontal: 22, paddingTop: 40, gap: 12 },
-  btnFull:    { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 17, alignItems: 'center' },
-  btnFullText:{ fontSize: 16, fontWeight: '800', color: '#fff' },
+  bottomCta: { paddingHorizontal: 22, paddingTop: 40, gap: 12 },
+  btnFull: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 17, alignItems: 'center' },
+  btnFullText: { fontSize: 16, fontWeight: '800', color: '#fff' },
   bottomNote: { fontSize: 13, color: Colors.textMuted, textAlign: 'center' },
 });

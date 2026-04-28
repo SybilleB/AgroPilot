@@ -13,21 +13,22 @@ import { register } from '@/services/auth.service';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/Colors';
+import { Layout } from '@/constants/layout';
 
 export default function RegisterScreen() {
   // ⚠️ TOUS les hooks AVANT tout return conditionnel (Rules of Hooks)
   const { session } = useAuth();
-  const router      = useRouter();
-  const insets      = useSafeAreaInsets();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
 
-  const [prenom,           setPrenom]           = useState('');
-  const [nom,              setNom]              = useState('');
-  const [email,            setEmail]            = useState('');
-  const [password,         setPassword]         = useState('');
-  const [confirmPassword,  setConfirmPassword]  = useState('');
-  const [loading,          setLoading]          = useState(false);
-  const [error,            setError]            = useState('');
-  const [success,          setSuccess]          = useState(false);
+  const [prenom, setPrenom] = useState('');
+  const [nom, setNom] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   if (session) return <Redirect href="/(app)" />;
 
@@ -40,8 +41,8 @@ export default function RegisterScreen() {
       setError('Merci de remplir tous les champs.'); return;
     }
     if (!EMAIL_REGEX.test(trimmedEmail)) { setError('Adresse email invalide.'); return; }
-    if (password !== confirmPassword)    { setError('Les mots de passe ne correspondent pas.'); return; }
-    if (password.length < 6)            { setError('Le mot de passe doit contenir au moins 6 caractères.'); return; }
+    if (password !== confirmPassword) { setError('Les mots de passe ne correspondent pas.'); return; }
+    if (password.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères.'); return; }
 
     setLoading(true);
     try {
@@ -178,67 +179,63 @@ export default function RegisterScreen() {
 }
 
 const s = StyleSheet.create({
-  root:      { flex: 1, backgroundColor: Colors.background },
+  root: { flex: 1, backgroundColor: Colors.background },
   container: { flexGrow: 1, paddingBottom: 48 },
 
   // Header
   header: {
     backgroundColor: Colors.headerBg,
-    paddingHorizontal: 26,
-    paddingBottom: 44,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    borderBottomLeftRadius: Layout.headerRadius,
+    borderBottomRightRadius: Layout.headerRadius,
     gap: 14,
   },
-  logoRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
   logoSquare: { width: 42, height: 42, borderRadius: 12, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   logoLetter: { fontSize: 22, fontWeight: '900', color: '#fff' },
-  logoName:   { fontSize: 18, fontWeight: '800', color: '#fff' },
-  logoTagline:{ fontSize: 9, color: Colors.headerTextMuted, letterSpacing: 2.5, marginTop: 1 },
-  heroTitle:  { fontSize: 28, fontWeight: '900', color: '#fff' },
-  heroSub:    { fontSize: 14, color: Colors.headerTextMuted, lineHeight: 21 },
+  logoName: { fontSize: 18, fontWeight: '800', color: '#fff' },
+  logoTagline: { fontSize: 9, color: Colors.headerTextMuted, letterSpacing: 2.5, marginTop: 1 },
+  heroTitle: { fontSize: 28, fontWeight: '900', color: '#fff' },
+  heroSub: { fontSize: 14, color: Colors.headerTextMuted, lineHeight: 21 },
 
   // Form
   formBlock: {
     marginTop: 28,
     marginHorizontal: 22,
     backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: Layout.cardRadius,
+    padding: 22,
     gap: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.07,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    ...Layout.cardShadow,
   },
-  errorBox:  { backgroundColor: Colors.errorBg, borderRadius: 10, padding: 14, marginBottom: 6, borderLeftWidth: 3, borderLeftColor: Colors.error },
+  errorBox: { backgroundColor: Colors.errorBg, borderRadius: 10, padding: 14, marginBottom: 6, borderLeftWidth: 3, borderLeftColor: Colors.error },
   errorText: { color: Colors.errorDark, fontSize: 13, lineHeight: 19 },
-  row:       { flexDirection: 'row', gap: 12 },
-  half:      { flex: 1 },
+  row: { flexDirection: 'row', gap: 12 },
+  half: { flex: 1 },
   submitBtn: { marginTop: 20 },
 
   // Footer
-  footer:    { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 28 },
-  footerText:{ color: Colors.textMuted, fontSize: 14 },
-  footerLink:{ color: Colors.primary, fontSize: 14, fontWeight: '700' },
+  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 24 },
+  footerText: { color: Colors.textMuted, fontSize: 14 },
+  footerLink: { color: Colors.primary, fontSize: 14, fontWeight: '700' },
 
   // Succès
-  successRoot:   { flex: 1, backgroundColor: Colors.background },
+  successRoot: { flex: 1, backgroundColor: Colors.background },
   successHeader: {
     backgroundColor: Colors.headerBg,
-    paddingHorizontal: 26,
-    paddingBottom: 44,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    borderBottomLeftRadius: Layout.headerRadius,
+    borderBottomRightRadius: Layout.headerRadius,
   },
-  successBody:      { flex: 1, alignItems: 'center', paddingHorizontal: 32, paddingTop: 48, gap: 16 },
-  successCheck:     { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  successBody: { flex: 1, alignItems: 'center', paddingHorizontal: 32, paddingTop: 48, gap: 16 },
+  successCheck: { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   successCheckText: { fontSize: 32, color: Colors.primary, fontWeight: '900' },
-  successTitle:     { fontSize: 26, fontWeight: '800', color: Colors.primaryDark },
-  successText:      { fontSize: 15, color: Colors.textMuted, textAlign: 'center', lineHeight: 22 },
-  successSubtext:   { fontSize: 13, color: Colors.textMuted, textAlign: 'center', lineHeight: 20, marginTop: -4 },
-  successBtn:       { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 28, marginTop: 4, width: '100%', alignItems: 'center' },
-  successBtnText:   { color: '#fff', fontSize: 16, fontWeight: '700' },
-  successLink:      { marginTop: 4, color: Colors.textMuted, fontSize: 13 },
+  successTitle: { fontSize: 26, fontWeight: '800', color: Colors.primaryDark },
+  successText: { fontSize: 15, color: Colors.textMuted, textAlign: 'center', lineHeight: 22 },
+  successSubtext: { fontSize: 13, color: Colors.textMuted, textAlign: 'center', lineHeight: 20, marginTop: -4 },
+  successBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 28, marginTop: 4, width: '100%', alignItems: 'center' },
+  successBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  successLink: { marginTop: 4, color: Colors.textMuted, fontSize: 13 },
 });

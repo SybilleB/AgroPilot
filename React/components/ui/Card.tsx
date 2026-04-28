@@ -19,7 +19,7 @@ export function Card({ variant = 'default', style, children, ...props }: CardPro
       style={[
         styles.base,
         variant === 'highlight' && styles.highlight,
-        variant === 'flat'      && styles.flat,
+        variant === 'flat' && styles.flat,
         style,
       ]}
       {...props}
@@ -41,5 +41,5 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   highlight: { backgroundColor: Colors.primaryBg, shadowOpacity: 0 },
-  flat:      { shadowOpacity: 0, elevation: 0 },
+  flat: { shadowOpacity: 0, elevation: 0 },
 });
