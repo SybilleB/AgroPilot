@@ -1,11 +1,48 @@
 /**
- * app/(app)/index.tsx — Tableau de bord principal
+ * app/(app)/index.tsx — Tableau de bord principal AgroPilot
  */
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useProfile } from '@/hooks/useProfile';
 import { Colors } from '@/constants/Colors';
+
+// ─── Composant Widget Météo Interactif ────────────────────────────────────────
+
+function MeteoWidget({ commune, onPress }: { commune?: string, onPress: () => void }) {
+  // Note : Ces données pourront être liées à une API météo réelle plus tard.
+  // Pour la démo, on simule un état "optimal" ou "alerte".
+  const temp = "22°C";
+  const condition = "Soleil"; // Options : "Pluie", "Vent", "Grêle", "Soleil"
+
+  const getMeteoStyle = () => {
+    switch (condition) {
+      case "Pluie": return { icon: "🌧️", advice: "Risque de lessivage : différez l'épandage." };
+      case "Vent": return { icon: "💨", advice: "Rafales à 45km/h : traitement déconseillé." };
+      case "Grêle": return { icon: "⛈️", advice: "Alerte grêle : mettez le matériel à l'abri." };
+      default: return { icon: "☀️", advice: "Aucune intempérie à venir : conditions optimales." };
+    }
+  };
+
+  const { icon, advice } = getMeteoStyle();
+
+  return (
+    <TouchableOpacity style={s.meteoWidget} onPress={onPress} activeOpacity={0.9}>
+      <View style={s.meteoMain}>
+        <View>
+          <Text style={s.meteoCity}>{commune || "Ma ferme"}</Text>
+          <Text style={s.meteoTemp}>{temp}</Text>
+        </View>
+        <Text style={s.meteoBigIcon}>{icon}</Text>
+      </View>
+      <View style={s.meteoDivider} />
+      <View style={s.meteoAdviceRow}>
+        <Text style={s.aiLabelMeteo}>CONSEIL IA</Text>
+        <Text style={s.meteoAdviceText}>{advice}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 // ─── Carte de navigation ──────────────────────────────────────────────────────
 
@@ -33,7 +70,7 @@ function NavCard({
   );
 }
 
-// ─── Écran ────────────────────────────────────────────────────────────────────
+// ─── Écran Principal ──────────────────────────────────────────────────────────
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
@@ -43,21 +80,19 @@ export default function DashboardScreen() {
   const prenom = fullProfile?.profile?.prenom;
   const exploitation = fullProfile?.exploitation;
 
-  const now    = new Date();
-  const hour   = now.getHours();
-  const salut  = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
+  const now = new Date();
+  const hour = now.getHours();
+  const salut = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
 
   return (
     <ScrollView
       style={s.root}
-      contentContainerStyle={[s.container, { paddingBottom: 32 }]}
+      contentContainerStyle={[s.container, { paddingBottom: insets.bottom + 32 }]}
       showsVerticalScrollIndicator={false}
     >
 
       {/* ─── HEADER ─────────────────────────────────────────────────────── */}
       <View style={[s.header, { paddingTop: insets.top + 24 }]}>
-
-        {/* Logo + salutation */}
         <View style={s.headerTop}>
           <View style={s.logoRow}>
             <View style={s.logoSquare}>
@@ -70,14 +105,10 @@ export default function DashboardScreen() {
           </View>
           <View style={s.greetingBox}>
             <Text style={s.greeting}>{salut}{prenom ? `, ${prenom}` : ''}</Text>
-            {exploitation?.commune
-              ? <Text style={s.greetingSub}>{exploitation.commune}</Text>
-              : <Text style={s.greetingSub}>Votre exploitation</Text>
-            }
+            <Text style={s.greetingSub}>{exploitation?.commune || "Votre exploitation"}</Text>
           </View>
         </View>
 
-        {/* Métriques rapides */}
         <View style={s.metricsRow}>
           <View style={s.metricBox}>
             <Text style={s.metricValue}>{exploitation?.surface_ha ?? '—'}</Text>
@@ -96,6 +127,12 @@ export default function DashboardScreen() {
         </View>
       </View>
 
+      {/* ─── WIDGET MÉTÉO ───────────────────────────────────────────────── */}
+      <MeteoWidget
+        commune={exploitation?.commune}
+        onPress={() => router.push('/(app)/meteo')}
+      />
+
       {/* ─── BANNIÈRE PROFIL INCOMPLET ───────────────────────────────────── */}
       {!loading && !isComplete && (
         <TouchableOpacity
@@ -108,7 +145,7 @@ export default function DashboardScreen() {
             <View style={{ flex: 1 }}>
               <Text style={s.bannerTitle}>Complétez votre profil</Text>
               <Text style={s.bannerDesc}>
-                Pour que l'IA trouve les subventions qui vous correspondent, on a besoin de quelques infos sur votre exploitation.
+                Nécessaire pour l'analyse IA des subventions et calculs de marges.
               </Text>
             </View>
           </View>
@@ -122,7 +159,7 @@ export default function DashboardScreen() {
       <NavCard
         icon="📈"
         title="Simulation de rentabilité"
-        desc="Calculez votre marge nette par hectare avant de semer"
+        desc="Calculez votre marge nette par hectare"
         badge="Nouveau"
         onPress={() => router.push('/(app)/rentabilite')}
       />
@@ -130,14 +167,14 @@ export default function DashboardScreen() {
       <NavCard
         icon="🌦️"
         title="Météo de l'exploitation"
-        desc="Conditions en temps réel, radar et prévisions 7 jours"
+        desc="Radar et prévisions agricoles à 7 jours"
         onPress={() => router.push('/(app)/meteo')}
       />
 
       <NavCard
         icon="💶"
         title="Subventions disponibles"
-        desc="PAC, aides régionales et plan de relance — filtrées pour vous"
+        desc="PAC et aides régionales filtrées pour vous"
         onPress={() => router.push('/(app)/subventions')}
       />
 
@@ -147,8 +184,8 @@ export default function DashboardScreen() {
         <Text style={s.aiTitle}>Votre copilote financier est prêt</Text>
         <Text style={s.aiBody}>
           {isComplete
-            ? `Votre profil est complet. L'IA peut désormais analyser vos subventions et simuler vos marges en tenant compte de votre exploitation.`
-            : `Complétez votre profil pour débloquer l'analyse complète de vos subventions et simuler vos marges avec précision.`
+            ? `Votre profil est complet. L'IA peut désormais analyser vos subventions en temps réel.`
+            : `Complétez votre profil pour débloquer l'analyse complète de vos subventions.`
           }
         </Text>
         {!isComplete && (
@@ -165,10 +202,9 @@ export default function DashboardScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:      { flex: 1, backgroundColor: Colors.background },
+  root: { flex: 1, backgroundColor: Colors.background },
   container: { paddingHorizontal: 0 },
 
-  // Header
   header: {
     backgroundColor: Colors.headerBg,
     paddingHorizontal: 22,
@@ -178,25 +214,44 @@ const s = StyleSheet.create({
     gap: 20,
     marginBottom: 22,
   },
-  headerTop:   { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  logoRow:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logoSquare:  { width: 38, height: 38, borderRadius: 11, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  logoLetter:  { fontSize: 20, fontWeight: '900', color: '#fff' },
-  logoName:    { fontSize: 16, fontWeight: '800', color: '#fff' },
+  headerTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logoSquare: { width: 38, height: 38, borderRadius: 11, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  logoLetter: { fontSize: 20, fontWeight: '900', color: '#fff' },
+  logoName: { fontSize: 16, fontWeight: '800', color: '#fff' },
   logoTagline: { fontSize: 8, color: Colors.headerTextMuted, letterSpacing: 2, marginTop: 1 },
 
   greetingBox: { alignItems: 'flex-end' },
-  greeting:    { fontSize: 15, fontWeight: '700', color: '#fff' },
+  greeting: { fontSize: 15, fontWeight: '700', color: '#fff' },
   greetingSub: { fontSize: 12, color: Colors.headerTextMuted, marginTop: 2 },
 
-  // Métriques
-  metricsRow:    { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 12 },
-  metricBox:     { flex: 1, alignItems: 'center' },
-  metricValue:   { fontSize: 20, fontWeight: '800', color: '#fff' },
-  metricLabel:   { fontSize: 11, color: Colors.headerTextMuted, marginTop: 2 },
+  metricsRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 12 },
+  metricBox: { flex: 1, alignItems: 'center' },
+  metricValue: { fontSize: 20, fontWeight: '800', color: '#fff' },
+  metricLabel: { fontSize: 11, color: Colors.headerTextMuted, marginTop: 2 },
   metricDivider: { width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center' },
 
-  // Bannière
+  // Styles Widget Météo
+  meteoWidget: {
+    marginHorizontal: 22,
+    marginBottom: 25,
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  meteoMain: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  meteoCity: { fontSize: 14, fontWeight: '600', color: Colors.textMuted, textTransform: 'uppercase' },
+  meteoTemp: { fontSize: 38, fontWeight: '800', color: Colors.primaryDark },
+  meteoBigIcon: { fontSize: 45 },
+  meteoDivider: { height: 1, backgroundColor: Colors.border, marginVertical: 15, opacity: 0.5 },
+  meteoAdviceRow: { gap: 4 },
+  aiLabelMeteo: { fontSize: 10, fontWeight: '700', color: Colors.primary, letterSpacing: 1.5 },
+  meteoAdviceText: { fontSize: 13, color: Colors.primaryDark, fontWeight: '600', lineHeight: 18 },
+
   banner: {
     marginHorizontal: 22,
     marginBottom: 20,
@@ -209,13 +264,12 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F0D080',
   },
-  bannerLeft:  { flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1 },
-  bannerDot:   { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.warning, marginTop: 5 },
+  bannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1 },
+  bannerDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.warning, marginTop: 5 },
   bannerTitle: { fontSize: 14, fontWeight: '700', color: '#5D3000', marginBottom: 3 },
-  bannerDesc:  { fontSize: 12, color: '#7A4500', lineHeight: 17 },
+  bannerDesc: { fontSize: 12, color: '#7A4500', lineHeight: 17 },
   bannerArrow: { fontSize: 22, color: Colors.warning, fontWeight: '700', paddingLeft: 8 },
 
-  // Section
   sectionLabel: {
     marginHorizontal: 22,
     marginBottom: 12,
@@ -226,7 +280,6 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
   },
 
-  // Nav cards
   navCard: {
     marginHorizontal: 22,
     marginBottom: 10,
@@ -239,25 +292,23 @@ const s = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  navCardLeft:  { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
-  navIconBox:   { width: 48, height: 48, borderRadius: 14, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
-  navIcon:      { fontSize: 22 },
-  navCardText:  { flex: 1, gap: 3 },
+  navCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
+  navIconBox: { width: 48, height: 48, borderRadius: 14, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  navIcon: { fontSize: 22 },
+  navCardText: { flex: 1, gap: 3 },
   navCardTitle: { fontSize: 15, fontWeight: '700', color: Colors.primaryDark },
-  navCardDesc:  { fontSize: 12, color: Colors.textMuted, lineHeight: 17 },
+  navCardDesc: { fontSize: 12, color: Colors.textMuted, lineHeight: 17 },
   navCardArrow: { alignItems: 'center', gap: 6 },
-  arrowText:    { fontSize: 22, color: Colors.textMuted, fontWeight: '300' },
-  badgePill:    { backgroundColor: Colors.primaryBg, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
-  badgePillText:{ fontSize: 10, fontWeight: '700', color: Colors.primary },
+  arrowText: { fontSize: 22, color: Colors.textMuted, fontWeight: '300' },
+  badgePill: { backgroundColor: Colors.primaryBg, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
+  badgePillText: { fontSize: 10, fontWeight: '700', color: Colors.primary },
 
-  // Bloc IA
   aiCard: {
     marginHorizontal: 22,
     marginTop: 10,
-    marginBottom: 4,
+    marginBottom: 20,
     backgroundColor: Colors.aiCardBg,
     borderRadius: 16,
     borderLeftWidth: 4,
@@ -267,7 +318,7 @@ const s = StyleSheet.create({
   },
   aiLabel: { fontSize: 10, fontWeight: '700', color: Colors.primary, letterSpacing: 2, textTransform: 'uppercase' },
   aiTitle: { fontSize: 17, fontWeight: '800', color: Colors.primaryDark },
-  aiBody:  { fontSize: 13, color: Colors.textMuted, lineHeight: 20 },
-  aiBtn:   { marginTop: 4, backgroundColor: Colors.primary, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  aiBtnText:{ color: '#fff', fontSize: 14, fontWeight: '700' },
+  aiBody: { fontSize: 13, color: Colors.textMuted, lineHeight: 20 },
+  aiBtn: { marginTop: 4, backgroundColor: Colors.primary, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  aiBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 });
