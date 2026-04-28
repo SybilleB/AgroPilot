@@ -48,8 +48,7 @@ async def call_gemini(prompt: str, schema) -> dict:
             )
             
             print(f"✅ Succès avec {model_name} !")
-            return json.loads(reponse.text) + calculer_marges_rapide(CULTURES_DB,requete.hectares,requete.type_sol)
-
+            return json.loads(reponse.text) 
         except Exception as e:
             last_error = str(e)
             print(f"❌ Échec avec {model_name} : {last_error}")
@@ -84,7 +83,7 @@ async def generer_recommandations(requete: RequeteTop3):
     
     DONNÉES : {requete.hectares}ha, Sol: {requete.type_sol}, Météo: {json.dumps(meteo)}
     BASE CULTURES : {json.dumps(CULTURES_DB)}
-    Marge brute :
+    Marge brute : {marge}
 
     MISSION :
     1. Calcule la rentabilité de CHAQUE culture de la base.
