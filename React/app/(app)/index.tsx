@@ -1,7 +1,8 @@
 /**
  * app/(app)/index.tsx — Tableau de bord principal
  */
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Head from 'expo-router/head';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useProfile } from '@/hooks/useProfile';
@@ -48,6 +49,8 @@ export default function DashboardScreen() {
   const salut  = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
 
   return (
+    <>
+    <Head><title>Accueil — AgroPilot</title></Head>
     <ScrollView
       style={s.root}
       contentContainerStyle={[s.container, { paddingBottom: 32 }]}
@@ -60,9 +63,11 @@ export default function DashboardScreen() {
         {/* Logo + salutation */}
         <View style={s.headerTop}>
           <View style={s.logoRow}>
-            <View style={s.logoSquare}>
-              <Text style={s.logoLetter}>A</Text>
-            </View>
+            <Image
+              source={require('@/assets/images/AgroPilot_icon_white.png')}
+              style={s.logoIcon}
+              resizeMode="contain"
+            />
             <View>
               <Text style={s.logoName}>AgroPilot</Text>
               <Text style={s.logoTagline}>PRÉVISION AGRICOLE</Text>
@@ -159,6 +164,7 @@ export default function DashboardScreen() {
       </View>
 
     </ScrollView>
+    </>
   );
 }
 
@@ -180,8 +186,7 @@ const s = StyleSheet.create({
   },
   headerTop:   { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   logoRow:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logoSquare:  { width: 38, height: 38, borderRadius: 11, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  logoLetter:  { fontSize: 20, fontWeight: '900', color: '#fff' },
+  logoIcon:    { width: 38, height: 38, borderRadius: 10 },
   logoName:    { fontSize: 16, fontWeight: '800', color: '#fff' },
   logoTagline: { fontSize: 8, color: Colors.headerTextMuted, letterSpacing: 2, marginTop: 1 },
 

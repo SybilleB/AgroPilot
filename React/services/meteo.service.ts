@@ -50,6 +50,7 @@ export interface DailyForecast {
 
 export interface HourlySlice {
   time: string[];
+  temp: number[];           // °C à 2 m
   soilTemp6cm: number[];    // °C à 6 cm
   soilTemp18cm: number[];   // °C à 18 cm
   precipitation: number[];  // mm/h
@@ -122,7 +123,7 @@ export async function fetchMeteo(lat: number, lon: number): Promise<MeteoData | 
         'sunrise',
         'sunset',
       ].join(','),
-      hourly:        'precipitation,soil_temperature_6cm,soil_temperature_18cm',
+      hourly:        'temperature_2m,precipitation,soil_temperature_6cm,soil_temperature_18cm',
       timezone:      'Europe/Paris',
       forecast_days: '7',
     });
@@ -161,6 +162,7 @@ export async function fetchMeteo(lat: number, lon: number): Promise<MeteoData | 
 
     const hourly: HourlySlice = {
       time:          d.hourly.time,
+      temp:          d.hourly.temperature_2m,
       soilTemp6cm:   d.hourly.soil_temperature_6cm,
       soilTemp18cm:  d.hourly.soil_temperature_18cm,
       precipitation: d.hourly.precipitation,

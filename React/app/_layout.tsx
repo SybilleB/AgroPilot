@@ -12,6 +12,7 @@
 import { useEffect, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/constants/Colors';
@@ -54,12 +55,16 @@ export default function RootLayout() {
 
   return (
     <>
+      <Head>
+        <title>AgroPilot</title>
+        <link rel="icon" type="image/png" href="/favicon.png" />
+      </Head>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-        <Stack.Screen name="index"         options={{ headerShown: false }} />
+        <Stack.Screen name="index"         options={{ headerShown: false, title: 'AgroPilot' }} />
         <Stack.Screen name="(auth)"        options={{ headerShown: false }} />
         <Stack.Screen name="(app)"         options={{ headerShown: false }} />
-        <Stack.Screen name="profile-setup" options={{ headerShown: false }} />
+        <Stack.Screen name="profile-setup" options={{ headerShown: false, title: 'Configuration — AgroPilot' }} />
       </Stack>
     </>
   );
