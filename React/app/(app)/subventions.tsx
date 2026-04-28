@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProfile } from '@/hooks/useProfile';
 import { fetchSubventionSuggestions, SubventionCard } from '@/services/subventions.service';
 import { Colors } from '@/constants/Colors';
+import Head from 'expo-router/head';
 
 // Clé unique pour le stockage local
 const CACHE_KEY = 'agropilot_subventions_cache';
@@ -139,6 +140,8 @@ export default function SubventionsScreen() {
   }
 
   return (
+    <>
+    <Head><title>Subventions — AgroPilot</title></Head>
     <ScrollView
       style={s.root}
       contentContainerStyle={[s.container, { paddingBottom: insets.bottom + 32 }]}
@@ -226,6 +229,7 @@ export default function SubventionsScreen() {
         </View>
       )}
     </ScrollView>
+    </>
   );
 }
 

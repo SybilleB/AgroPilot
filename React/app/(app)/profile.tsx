@@ -21,6 +21,7 @@ import { logout, changeEmail, changePassword } from '@/services/auth.service';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/Colors';
+import Head from 'expo-router/head';
 
 // ─── Labels lisibles ──────────────────────────────────────────────────────────
 
@@ -127,6 +128,8 @@ export default function ProfileScreen() {
   // ── Rendu ─────────────────────────────────────────────────────────────────────
 
   return (
+    <>
+    <Head><title>Mon profil — AgroPilot</title></Head>
     <ScrollView
       style={s.root}
       contentContainerStyle={[s.container, { paddingBottom: insets.bottom + 32 }]}
@@ -287,6 +290,7 @@ export default function ProfileScreen() {
       </View>
 
     </ScrollView>
+    </>
   );
 }
 

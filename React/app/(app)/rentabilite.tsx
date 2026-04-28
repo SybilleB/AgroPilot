@@ -15,6 +15,7 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/Colors';
+import Head from 'expo-router/head';
 
 // ─── Carte de fonctionnalité à venir ─────────────────────────────────────────
 
@@ -36,6 +37,8 @@ export default function RentabiliteScreen() {
   const insets = useSafeAreaInsets();
 
   return (
+    <>
+    <Head><title>Rentabilité — AgroPilot</title></Head>
     <ScrollView
       style={s.root}
       contentContainerStyle={[s.container, { paddingBottom: insets.bottom + 40 }]}
@@ -104,6 +107,7 @@ export default function RentabiliteScreen() {
       </View>
 
     </ScrollView>
+    </>
   );
 }
 

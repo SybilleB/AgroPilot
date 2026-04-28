@@ -3,10 +3,11 @@
  */
 import { useState } from 'react';
 import {
-  KeyboardAvoidingView, Platform, ScrollView,
+  Image, KeyboardAvoidingView, Platform, ScrollView,
   StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import { Link, Redirect, useRouter } from 'expo-router';
+import Head from 'expo-router/head';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
 import { register } from '@/services/auth.service';
@@ -62,9 +63,11 @@ export default function RegisterScreen() {
       <View style={[s.successRoot, { paddingTop: insets.top }]}>
         <View style={[s.successHeader, { paddingTop: insets.top + 48 }]}>
           <View style={s.logoRow}>
-            <View style={s.logoSquare}>
-              <Text style={s.logoLetter}>A</Text>
-            </View>
+            <Image
+              source={require('@/assets/images/AgroPilot_icon_white.png')}
+              style={s.logoIcon}
+              resizeMode="contain"
+            />
             <Text style={s.logoName}>AgroPilot</Text>
           </View>
         </View>
@@ -95,6 +98,7 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <Head><title>Inscription — AgroPilot</title></Head>
       <ScrollView
         style={s.root}
         contentContainerStyle={s.container}
@@ -105,9 +109,11 @@ export default function RegisterScreen() {
         {/* ─── HEADER ─────────────────────────────────────────────────────── */}
         <View style={[s.header, { paddingTop: insets.top + 36 }]}>
           <View style={s.logoRow}>
-            <View style={s.logoSquare}>
-              <Text style={s.logoLetter}>A</Text>
-            </View>
+            <Image
+              source={require('@/assets/images/AgroPilot_icon_white.png')}
+              style={s.logoIcon}
+              resizeMode="contain"
+            />
             <View>
               <Text style={s.logoName}>AgroPilot</Text>
               <Text style={s.logoTagline}>PRÉVISION AGRICOLE</Text>
@@ -191,8 +197,7 @@ const s = StyleSheet.create({
     gap: 14,
   },
   logoRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
-  logoSquare: { width: 42, height: 42, borderRadius: 12, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  logoLetter: { fontSize: 22, fontWeight: '900', color: '#fff' },
+  logoIcon:   { width: 42, height: 42, borderRadius: 11 },
   logoName:   { fontSize: 18, fontWeight: '800', color: '#fff' },
   logoTagline:{ fontSize: 9, color: Colors.headerTextMuted, letterSpacing: 2.5, marginTop: 1 },
   heroTitle:  { fontSize: 28, fontWeight: '900', color: '#fff' },

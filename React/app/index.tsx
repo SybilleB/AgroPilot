@@ -1,34 +1,34 @@
 /**
  * app/index.tsx — Page d'accueil AgroPilot
- * Présentation claire de l'application et de sa valeur pour l'agriculteur.
- * Guard de navigation : géré par _layout.tsx (pas de redirect ici).
  */
-import { ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import Head from 'expo-router/head';
 import { Colors } from '@/constants/Colors';
 
-// ─── Carte fonctionnalité ─────────────────────────────────────────────────────
+// ─── Ligne fonctionnalité ──────────────────────────────────────────────────────
 
-function FeatureCard({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+function FeatureRow({ num, title, desc }: { num: string; title: string; desc: string }) {
   return (
-    <View style={s.featureCard}>
-      <View style={s.featureIconBox}>
-        <Text style={s.featureIconEmoji}>{icon}</Text>
+    <View style={s.featureRow}>
+      <View style={s.featureNum}>
+        <Text style={s.featureNumText}>{num}</Text>
       </View>
-      <Text style={s.featureTitle}>{title}</Text>
-      <Text style={s.featureDesc}>{desc}</Text>
+      <View style={s.featureText}>
+        <Text style={s.featureTitle}>{title}</Text>
+        <Text style={s.featureDesc}>{desc}</Text>
+      </View>
     </View>
   );
 }
 
-// ─── Chiffre clé ─────────────────────────────────────────────────────────────
+// ─── Témoignage / proof ────────────────────────────────────────────────────────
 
-function StatBox({ value, label }: { value: string; label: string }) {
+function ProofPill({ text }: { text: string }) {
   return (
-    <View style={s.statBox}>
-      <Text style={s.statValue}>{value}</Text>
-      <Text style={s.statLabel}>{label}</Text>
+    <View style={s.proofPill}>
+      <Text style={s.proofPillText}>{text}</Text>
     </View>
   );
 }
@@ -41,34 +41,58 @@ export default function LandingScreen() {
 
   return (
     <View style={s.root}>
+      <Head>
+        <title>AgroPilot — Votre copilote financier agricole</title>
+        <link rel="icon" type="image/png" href="/favicon.png" />
+      </Head>
       <StatusBar barStyle="light-content" backgroundColor={Colors.headerBg} />
 
       <ScrollView
-        contentContainerStyle={[s.container, { paddingBottom: insets.bottom + 48 }]}
+        contentContainerStyle={[s.container, { paddingBottom: insets.bottom + 56 }]}
         showsVerticalScrollIndicator={false}
       >
 
         {/* ─── HERO ───────────────────────────────────────────────────────── */}
-        <View style={[s.hero, { paddingTop: insets.top + 36 }]}>
-          {/* Logo — remplacer par <Image source={require('@/assets/images/logo-light.png')} /> */}
+        <View style={[s.hero, { paddingTop: insets.top + 28 }]}>
+
+          {/* Logo */}
           <View style={s.logoRow}>
-            <View style={s.logoSquare}>
-              <Text style={s.logoLetter}>A</Text>
-            </View>
+            <Image
+              source={require('@/assets/images/AgroPilot_icon_white.png')}
+              style={s.logoIcon}
+              resizeMode="contain"
+            />
             <View>
               <Text style={s.logoName}>AgroPilot</Text>
               <Text style={s.logoTagline}>PRÉVISION AGRICOLE</Text>
             </View>
           </View>
 
+          {/* Badge */}
+          <View style={s.heroBadge}>
+            <View style={s.heroBadgeDot} />
+            <Text style={s.heroBadgeText}>Copilote financier pour agriculteurs</Text>
+          </View>
+
+          {/* Titre */}
           <Text style={s.heroTitle}>
-            Gérez votre exploitation{'\n'}avec un coup d'avance
-          </Text>
-          <Text style={s.heroSub}>
-            Volatilité des marchés, explosion des coûts, dossiers d'aides
-            complexes — AgroPilot vous aide à voir clair et à décider au bon moment.
+            Prenez les{'\n'}bonnes décisions{'\n'}
+            <Text style={s.heroTitleAccent}>avant tout le monde</Text>
           </Text>
 
+          <Text style={s.heroSub}>
+            Marchés volatils, charges en hausse, dossiers PAC complexes —
+            AgroPilot fait les calculs pour vous et vous alerte quand il faut agir.
+          </Text>
+
+          {/* Pills preuve */}
+          <View style={s.proofRow}>
+            <ProofPill text="Prix céréales en temps réel" />
+            <ProofPill text="PAC & aides régionales" />
+            <ProofPill text="Météo agricole 7 j" />
+          </View>
+
+          {/* CTA */}
           <TouchableOpacity
             style={s.btnPrimary}
             onPress={() => router.push('/(auth)/register')}
@@ -87,58 +111,78 @@ export default function LandingScreen() {
         </View>
 
         {/* ─── STATS ──────────────────────────────────────────────────────── */}
-        <View style={s.statsCard}>
-          <StatBox value="7 j" label="Prévisions météo" />
-          <View style={s.statDivider} />
-          <StatBox value="PAC" label="Aides EU incluses" />
-          <View style={s.statDivider} />
-          <StatBox value="100%" label="Gratuit" />
+        <View style={s.statsRow}>
+          <View style={s.statItem}>
+            <Text style={s.statVal}>7 j</Text>
+            <Text style={s.statLbl}>de prévisions météo</Text>
+          </View>
+          <View style={s.statDiv} />
+          <View style={s.statItem}>
+            <Text style={s.statVal}>100%</Text>
+            <Text style={s.statLbl}>gratuit</Text>
+          </View>
+          <View style={s.statDiv} />
+          <View style={s.statItem}>
+            <Text style={s.statVal}>IA</Text>
+            <Text style={s.statLbl}>analyse de subventions</Text>
+          </View>
         </View>
 
         {/* ─── PROBLÈME ───────────────────────────────────────────────────── */}
-        <View style={s.section}>
-          <Text style={s.sectionEyebrow}>POUR QUOI FAIRE ?</Text>
-          <Text style={s.sectionTitle}>Votre exploitation mérite mieux qu'un tableur</Text>
-          <Text style={s.sectionBody}>
-            Entre les prix du blé qui varient du simple au double en quelques mois,
-            les charges qui augmentent et les dossiers PAC à remplir, prendre les
-            bonnes décisions est devenu un travail à plein temps.{'\n\n'}
-            AgroPilot centralise les données qui comptent et fait le calcul à votre place.
+        <View style={s.problemBlock}>
+          <Text style={s.eyebrow}>LE PROBLÈME</Text>
+          <Text style={s.blockTitle}>Votre exploitation mérite mieux qu'un tableur</Text>
+          <Text style={s.blockBody}>
+            Entre les prix du blé qui doublent en quelques mois, les charges qui augmentent
+            et les dossiers PAC à remplir, prendre les bonnes décisions est devenu un travail
+            à plein temps.
           </Text>
+          <View style={s.problemHighlight}>
+            <Text style={s.problemHighlightText}>
+              AgroPilot centralise les données qui comptent et fait le calcul à votre place.
+            </Text>
+          </View>
         </View>
 
         {/* ─── FONCTIONNALITÉS ────────────────────────────────────────────── */}
-        <View style={s.section}>
-          <Text style={s.sectionEyebrow}>CE QU'ON FAIT POUR VOUS</Text>
+        <View style={s.featuresBlock}>
+          <Text style={s.eyebrow}>CE QU'ON FAIT POUR VOUS</Text>
+          <Text style={s.blockTitle}>Tout ce dont vous avez besoin, réuni au même endroit</Text>
 
-          <FeatureCard
-            icon="📈"
-            title="Tendances de marché"
-            desc="Suivez les prix du blé, maïs, colza et soja. Comparez avec vos coûts de production pour vendre au bon moment."
-          />
-          <FeatureCard
-            icon="🧮"
-            title="Simulation de rentabilité"
-            desc="Avant de semer, calculez votre marge nette par hectare en croisant charges réelles, rendement estimé et prix de marché."
-          />
-          <FeatureCard
-            icon="💶"
-            title="Subventions PAC & régionales"
-            desc="L'IA identifie les aides disponibles pour votre exploitation et vous dit si vous êtes éligible, sans que vous ayez à chercher."
-          />
-          <FeatureCard
-            icon="🌦️"
-            title="Météo agricole détaillée"
-            desc="ETP, température du sol, risque de gel, conditions de traitement phytosanitaire — toutes les données utiles sur le terrain."
-          />
+          <View style={s.featureList}>
+            <FeatureRow
+              num="01"
+              title="Tendances de marché"
+              desc="Prix du blé, maïs, colza et soja. Comparez avec vos coûts de production pour vendre au bon moment."
+            />
+            <View style={s.featureDivider} />
+            <FeatureRow
+              num="02"
+              title="Simulation de rentabilité"
+              desc="Calculez votre marge nette par hectare en croisant charges réelles, rendement estimé et prix de marché."
+            />
+            <View style={s.featureDivider} />
+            <FeatureRow
+              num="03"
+              title="Subventions PAC & régionales"
+              desc="L'IA identifie les aides disponibles pour votre exploitation et vérifie votre éligibilité automatiquement."
+            />
+            <View style={s.featureDivider} />
+            <FeatureRow
+              num="04"
+              title="Météo agricole détaillée"
+              desc="ETP, température du sol, gel, conditions phyto — toutes les données utiles pour votre terrain."
+            />
+          </View>
         </View>
 
         {/* ─── PROMESSE ───────────────────────────────────────────────────── */}
         <View style={s.promiseBlock}>
-          <Text style={s.promiseTitle}>Conçu pour les agriculteurs,{'\n'}pas pour les comptables</Text>
+          <Text style={s.promiseLabel}>NOTRE PROMESSE</Text>
+          <Text style={s.promiseTitle}>Conçu pour les agriculteurs, pas pour les comptables</Text>
           <Text style={s.promiseBody}>
-            Pas de jargon financier inutile. Des chiffres clairs, des alertes au bon
-            moment, et des recommandations que vous pouvez comprendre sans être expert.
+            Pas de jargon inutile. Des chiffres clairs, des alertes au bon moment,
+            des recommandations que vous pouvez comprendre sans formation.
           </Text>
         </View>
 
@@ -165,93 +209,119 @@ const s = StyleSheet.create({
   root:      { flex: 1, backgroundColor: Colors.background },
   container: { flexGrow: 1 },
 
-  // Hero
+  // ── Hero ──────────────────────────────────────────────────────────────────
   hero: {
     backgroundColor: Colors.headerBg,
     paddingHorizontal: 26,
-    paddingBottom: 48,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    gap: 16,
+    paddingBottom: 52,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    gap: 18,
   },
 
-  // Logo
-  logoRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
-  logoSquare: { width: 46, height: 46, borderRadius: 13, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  logoLetter: { fontSize: 24, fontWeight: '900', color: '#fff' },
-  logoName:   { fontSize: 20, fontWeight: '800', color: '#fff' },
+  logoRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
+  logoIcon:   { width: 42, height: 42, borderRadius: 11 },
+  logoName:   { fontSize: 18, fontWeight: '800', color: '#fff' },
   logoTagline:{ fontSize: 9, color: Colors.headerTextMuted, letterSpacing: 2.5, marginTop: 1 },
 
-  // Hero textes
-  heroTitle: { fontSize: 30, fontWeight: '900', color: '#fff', lineHeight: 37, marginTop: 4 },
-  heroSub:   { fontSize: 15, color: Colors.headerTextMuted, lineHeight: 23 },
+  heroBadge:     { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
+  heroBadgeDot:  { width: 6, height: 6, borderRadius: 3, backgroundColor: '#7EC854' },
+  heroBadgeText: { fontSize: 12, color: Colors.headerTextMuted, fontWeight: '600', letterSpacing: 0.3 },
 
-  // Boutons hero
-  btnPrimary:     { backgroundColor: '#fff', borderRadius: 14, paddingVertical: 17, alignItems: 'center', marginTop: 4 },
-  btnPrimaryText: { fontSize: 16, fontWeight: '800', color: Colors.primaryDark },
-  btnSecondary:   { paddingVertical: 10, alignItems: 'center' },
-  btnSecondaryText: { fontSize: 15, color: Colors.headerTextMuted, fontWeight: '600' },
+  heroTitle:       { fontSize: 34, fontWeight: '900', color: '#fff', lineHeight: 40 },
+  heroTitleAccent: { color: '#A8D96A' },
+  heroSub:         { fontSize: 15, color: Colors.headerTextMuted, lineHeight: 23, marginTop: -4 },
 
-  // Stats card
-  statsCard: {
+  proofRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -4 },
+  proofPill:{ backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
+  proofPillText:{ fontSize: 11, color: 'rgba(255,255,255,0.80)', fontWeight: '600' },
+
+  btnPrimary:     { backgroundColor: '#A8D96A', borderRadius: 14, paddingVertical: 17, alignItems: 'center', marginTop: 4 },
+  btnPrimaryText: { fontSize: 16, fontWeight: '800', color: '#1A3A0F' },
+  btnSecondary:   { paddingVertical: 8, alignItems: 'center' },
+  btnSecondaryText: { fontSize: 15, color: 'rgba(255,255,255,0.60)', fontWeight: '500' },
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  statsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: Colors.white,
-    marginHorizontal: 20,
-    marginTop: -20,
-    borderRadius: 16,
-    paddingVertical: 18,
+    marginHorizontal: 22,
+    marginTop: -22,
+    borderRadius: 18,
+    paddingVertical: 20,
     paddingHorizontal: 14,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 6,
+    shadowOpacity: 0.10,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
   },
-  statBox:    { flex: 1, alignItems: 'center' },
-  statValue:  { fontSize: 22, fontWeight: '900', color: Colors.primaryDark },
-  statLabel:  { fontSize: 11, color: Colors.textMuted, marginTop: 2, textAlign: 'center' },
-  statDivider:{ width: 1, height: 34, backgroundColor: Colors.border },
+  statItem:  { flex: 1, alignItems: 'center', gap: 3 },
+  statVal:   { fontSize: 22, fontWeight: '900', color: Colors.primaryDark },
+  statLbl:   { fontSize: 11, color: Colors.textMuted, textAlign: 'center', lineHeight: 15 },
+  statDiv:   { width: 1, height: 38, backgroundColor: Colors.border, alignSelf: 'center' },
 
-  // Sections
-  section:      { paddingHorizontal: 22, paddingTop: 38, gap: 14 },
-  sectionEyebrow:{ fontSize: 11, fontWeight: '700', color: Colors.primary, letterSpacing: 2, textTransform: 'uppercase' },
-  sectionTitle:  { fontSize: 23, fontWeight: '800', color: Colors.primaryDark, lineHeight: 29, marginTop: -2 },
-  sectionBody:   { fontSize: 15, color: Colors.textMuted, lineHeight: 23 },
+  // ── Blocks ────────────────────────────────────────────────────────────────
+  eyebrow:   { fontSize: 11, fontWeight: '700', color: Colors.primary, letterSpacing: 2.5, textTransform: 'uppercase' },
+  blockTitle:{ fontSize: 22, fontWeight: '800', color: Colors.primaryDark, lineHeight: 28, marginTop: 6 },
+  blockBody: { fontSize: 15, color: Colors.textMuted, lineHeight: 23 },
 
-  // Feature cards
-  featureCard: {
+  problemBlock: {
+    marginHorizontal: 22,
+    marginTop: 40,
+    gap: 12,
+  },
+  problemHighlight: {
+    backgroundColor: Colors.primaryBg,
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
+    marginTop: 4,
+  },
+  problemHighlightText: { fontSize: 15, fontWeight: '600', color: Colors.primaryDark, lineHeight: 22 },
+
+  // ── Features ──────────────────────────────────────────────────────────────
+  featuresBlock: {
+    marginHorizontal: 22,
+    marginTop: 40,
+    gap: 12,
+  },
+  featureList: {
     backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 20,
-    gap: 8,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    marginTop: 4,
     shadowColor: '#000',
     shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
-  featureIconBox:   { width: 46, height: 46, borderRadius: 13, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  featureIconEmoji: { fontSize: 22 },
-  featureTitle:     { fontSize: 16, fontWeight: '700', color: Colors.primaryDark },
-  featureDesc:      { fontSize: 14, color: Colors.textMuted, lineHeight: 21 },
+  featureRow:     { flexDirection: 'row', alignItems: 'flex-start', gap: 16, paddingVertical: 20 },
+  featureNum:     { width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', marginTop: 1, flexShrink: 0 },
+  featureNumText: { fontSize: 11, fontWeight: '800', color: Colors.primary, letterSpacing: 0.5 },
+  featureText:    { flex: 1, gap: 4 },
+  featureTitle:   { fontSize: 15, fontWeight: '700', color: Colors.primaryDark },
+  featureDesc:    { fontSize: 13, color: Colors.textMuted, lineHeight: 20 },
+  featureDivider: { height: 1, backgroundColor: Colors.border, marginLeft: 48 },
 
-  // Promise block
+  // ── Promise ───────────────────────────────────────────────────────────────
   promiseBlock: {
     marginHorizontal: 22,
     marginTop: 36,
-    backgroundColor: Colors.aiCardBg,
-    borderRadius: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.aiCardBorder,
-    padding: 22,
+    backgroundColor: Colors.headerBg,
+    borderRadius: 20,
+    padding: 26,
     gap: 10,
   },
-  promiseTitle: { fontSize: 19, fontWeight: '800', color: Colors.primaryDark, lineHeight: 25 },
-  promiseBody:  { fontSize: 14, color: Colors.textMuted, lineHeight: 21 },
+  promiseLabel: { fontSize: 10, fontWeight: '700', color: '#A8D96A', letterSpacing: 2.5, textTransform: 'uppercase' },
+  promiseTitle: { fontSize: 20, fontWeight: '800', color: '#fff', lineHeight: 26 },
+  promiseBody:  { fontSize: 14, color: 'rgba(255,255,255,0.65)', lineHeight: 21 },
 
-  // Bottom CTA
-  bottomCta:  { paddingHorizontal: 22, paddingTop: 40, gap: 12 },
+  // ── CTA bas ───────────────────────────────────────────────────────────────
+  bottomCta:  { paddingHorizontal: 22, paddingTop: 36, gap: 12 },
   btnFull:    { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 17, alignItems: 'center' },
   btnFullText:{ fontSize: 16, fontWeight: '800', color: '#fff' },
   bottomNote: { fontSize: 13, color: Colors.textMuted, textAlign: 'center' },
