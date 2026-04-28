@@ -1,177 +1,578 @@
-[
-  {
-    "code": "BLE",
-    "libelle": "Blé tendre d'hiver",
-    "categorie": "Céréales",
-    "parametres_agronomiques": {
-      "temperature_base_celsius": 0,
-      "regles_semis": {
-        "temperature_sol_min_celsius": 8,
-        "pluie_prevue_min_mm": 5,
-        "pluie_prevue_max_mm": 25
-      }
+{
+  "cultures": [
+    {
+      "value": "ble_tendre",
+      "label": "Blé tendre",
+      "rendement_optimal_t_ha": 7.5,
+      "unite": "t/ha",
+      "source_reference": "FranceAgriMer / Arvalis 2022",
+      "notes": "Conditions idéales : sol limoneux, pluviométrie 600-700mm/an",
+      "charges_ha": {
+        "argileux": {
+          "semences": 120,
+          "engrais": 260,
+          "phytosanitaires": 200,
+          "mecanisation": 260,
+          "irrigation": 0,
+          "divers": 55,
+          "total": 895
+        },
+        "limoneux": {
+          "semences": 120,
+          "engrais": 280,
+          "phytosanitaires": 180,
+          "mecanisation": 210,
+          "irrigation": 0,
+          "divers": 50,
+          "total": 840
+        },
+        "sableux": {
+          "semences": 120,
+          "engrais": 320,
+          "phytosanitaires": 170,
+          "mecanisation": 200,
+          "irrigation": 80,
+          "divers": 55,
+          "total": 945
+        }
+      },
+      "prix_vente_t": 210,
+      "source_prix": "FranceAgriMer 2022"
     },
-    "donnees_economiques": {
-      "rendement_moyen": 7.5,
-      "prix_vente_tonne": 210.0,
-      "charge_semences_ha": 120.0,
-      "charge_engrais_ha": 350.0,
-      "charge_phytos_ha": 200.0
+    {
+      "value": "ble_dur",
+      "label": "Blé dur",
+      "rendement_optimal_t_ha": 5.5,
+      "unite": "t/ha",
+      "source_reference": "FranceAgriMer / Arvalis 2022",
+      "notes": "Plus sensible à la sécheresse que le blé tendre",
+      "charges_ha": {
+        "argileux": {
+          "semences": 150,
+          "engrais": 270,
+          "phytosanitaires": 210,
+          "mecanisation": 260,
+          "irrigation": 0,
+          "divers": 60,
+          "total": 950
+        },
+        "limoneux": {
+          "semences": 150,
+          "engrais": 290,
+          "phytosanitaires": 190,
+          "mecanisation": 210,
+          "irrigation": 0,
+          "divers": 55,
+          "total": 895
+        },
+        "sableux": {
+          "semences": 150,
+          "engrais": 330,
+          "phytosanitaires": 180,
+          "mecanisation": 200,
+          "irrigation": 100,
+          "divers": 60,
+          "total": 1020
+        }
+      },
+      "prix_vente_t": 310,
+      "source_prix": "FranceAgriMer 2022"
     },
-    "affinites_sol": {
-      "argileux": { "bonus_rendement": 1.1, "note": "Terre riche et profonde, idéal pour le potentiel du blé." },
-      "limoneux": { "bonus_rendement": 1.0, "note": "Bon équilibre, rendement stable." },
-      "sableux": { "bonus_rendement": 0.8, "note": "Sol filtrant, risque de manque d'eau en fin de cycle." }
+    {
+      "value": "orge_hiver",
+      "label": "Orge d'hiver",
+      "rendement_optimal_t_ha": 7.0,
+      "unite": "t/ha",
+      "source_reference": "Agreste / Arvalis 2022",
+      "notes": "Cycle long, bonne résistance au froid",
+      "charges_ha": {
+        "argileux": {
+          "semences": 130,
+          "engrais": 220,
+          "phytosanitaires": 180,
+          "mecanisation": 250,
+          "irrigation": 0,
+          "divers": 50,
+          "total": 830
+        },
+        "limoneux": {
+          "semences": 130,
+          "engrais": 240,
+          "phytosanitaires": 160,
+          "mecanisation": 200,
+          "irrigation": 0,
+          "divers": 45,
+          "total": 775
+        },
+        "sableux": {
+          "semences": 130,
+          "engrais": 280,
+          "phytosanitaires": 150,
+          "mecanisation": 190,
+          "irrigation": 60,
+          "divers": 50,
+          "total": 860
+        }
+      },
+      "prix_vente_t": 195,
+      "source_prix": "FranceAgriMer 2022"
+    },
+    {
+      "value": "orge_printemps",
+      "label": "Orge de printemps",
+      "rendement_optimal_t_ha": 5.8,
+      "unite": "t/ha",
+      "source_reference": "Agreste / Arvalis 2022",
+      "notes": "Rendement inférieur à l'orge d'hiver, qualité brassicole",
+      "charges_ha": {
+        "argileux": {
+          "semences": 140,
+          "engrais": 185,
+          "phytosanitaires": 145,
+          "mecanisation": 240,
+          "irrigation": 0,
+          "divers": 45,
+          "total": 755
+        },
+        "limoneux": {
+          "semences": 140,
+          "engrais": 200,
+          "phytosanitaires": 130,
+          "mecanisation": 190,
+          "irrigation": 0,
+          "divers": 40,
+          "total": 700
+        },
+        "sableux": {
+          "semences": 140,
+          "engrais": 240,
+          "phytosanitaires": 120,
+          "mecanisation": 180,
+          "irrigation": 50,
+          "divers": 45,
+          "total": 775
+        }
+      },
+      "prix_vente_t": 210,
+      "source_prix": "FranceAgriMer 2022"
+    },
+    {
+      "value": "mais",
+      "label": "Maïs",
+      "rendement_optimal_t_ha": 10.5,
+      "unite": "t/ha",
+      "source_reference": "FranceAgriMer / Arvalis 2022",
+      "notes": "Très sensible au stress hydrique en juillet-août (floraison)",
+      "charges_ha": {
+        "argileux": {
+          "semences": 200,
+          "engrais": 300,
+          "phytosanitaires": 130,
+          "mecanisation": 300,
+          "irrigation": 100,
+          "divers": 65,
+          "total": 1095
+        },
+        "limoneux": {
+          "semences": 200,
+          "engrais": 320,
+          "phytosanitaires": 120,
+          "mecanisation": 260,
+          "irrigation": 200,
+          "divers": 60,
+          "total": 1160
+        },
+        "sableux": {
+          "semences": 200,
+          "engrais": 360,
+          "phytosanitaires": 110,
+          "mecanisation": 250,
+          "irrigation": 350,
+          "divers": 65,
+          "total": 1335
+        }
+      },
+      "prix_vente_t": 200,
+      "source_prix": "FranceAgriMer 2022"
+    },
+    {
+      "value": "tournesol",
+      "label": "Tournesol",
+      "rendement_optimal_t_ha": 2.8,
+      "unite": "t/ha",
+      "source_reference": "Terres Inovia 2022",
+      "notes": "Relativement tolérant à la sécheresse, sensible à la sclérotinia",
+      "charges_ha": {
+        "argileux": {
+          "semences": 80,
+          "engrais": 110,
+          "phytosanitaires": 115,
+          "mecanisation": 220,
+          "irrigation": 0,
+          "divers": 40,
+          "total": 565
+        },
+        "limoneux": {
+          "semences": 80,
+          "engrais": 120,
+          "phytosanitaires": 100,
+          "mecanisation": 180,
+          "irrigation": 0,
+          "divers": 35,
+          "total": 515
+        },
+        "sableux": {
+          "semences": 80,
+          "engrais": 140,
+          "phytosanitaires": 95,
+          "mecanisation": 170,
+          "irrigation": 80,
+          "divers": 40,
+          "total": 605
+        }
+      },
+      "prix_vente_t": 480,
+      "source_prix": "Terres Inovia 2022"
+    },
+    {
+      "value": "colza",
+      "label": "Colza",
+      "rendement_optimal_t_ha": 3.8,
+      "unite": "t/ha",
+      "source_reference": "Terres Inovia 2022",
+      "notes": "Très sensible au gel tardif et aux ravageurs (charançon)",
+      "charges_ha": {
+        "argileux": {
+          "semences": 60,
+          "engrais": 250,
+          "phytosanitaires": 240,
+          "mecanisation": 250,
+          "irrigation": 0,
+          "divers": 60,
+          "total": 860
+        },
+        "limoneux": {
+          "semences": 60,
+          "engrais": 270,
+          "phytosanitaires": 220,
+          "mecanisation": 200,
+          "irrigation": 0,
+          "divers": 55,
+          "total": 805
+        },
+        "sableux": {
+          "semences": 60,
+          "engrais": 310,
+          "phytosanitaires": 210,
+          "mecanisation": 190,
+          "irrigation": 60,
+          "divers": 60,
+          "total": 890
+        }
+      },
+      "prix_vente_t": 520,
+      "source_prix": "Terres Inovia 2022"
+    },
+    {
+      "value": "soja",
+      "label": "Soja",
+      "rendement_optimal_t_ha": 3.2,
+      "unite": "t/ha",
+      "source_reference": "UNIP / Terres Inovia 2022",
+      "notes": "Besoin en eau élevé, sensible aux températures basses",
+      "charges_ha": {
+        "argileux": {
+          "semences": 110,
+          "engrais": 70,
+          "phytosanitaires": 100,
+          "mecanisation": 230,
+          "irrigation": 100,
+          "divers": 45,
+          "total": 655
+        },
+        "limoneux": {
+          "semences": 110,
+          "engrais": 80,
+          "phytosanitaires": 90,
+          "mecanisation": 190,
+          "irrigation": 150,
+          "divers": 40,
+          "total": 660
+        },
+        "sableux": {
+          "semences": 110,
+          "engrais": 100,
+          "phytosanitaires": 85,
+          "mecanisation": 180,
+          "irrigation": 280,
+          "divers": 45,
+          "total": 800
+        }
+      },
+      "prix_vente_t": 430,
+      "source_prix": "UNIP 2022"
+    },
+    {
+      "value": "betterave",
+      "label": "Betterave",
+      "rendement_optimal_t_ha": 85.0,
+      "unite": "t/ha",
+      "source_reference": "CGB (Confédération Générale des Betteraviers) 2022",
+      "notes": "Rendement en racines fraîches. Très sensible à la jaunisse virale",
+      "charges_ha": {
+        "argileux": {
+          "semences": 180,
+          "engrais": 330,
+          "phytosanitaires": 300,
+          "mecanisation": 520,
+          "irrigation": 0,
+          "divers": 85,
+          "total": 1415
+        },
+        "limoneux": {
+          "semences": 180,
+          "engrais": 350,
+          "phytosanitaires": 280,
+          "mecanisation": 450,
+          "irrigation": 0,
+          "divers": 80,
+          "total": 1340
+        },
+        "sableux": {
+          "semences": 180,
+          "engrais": 400,
+          "phytosanitaires": 260,
+          "mecanisation": 430,
+          "irrigation": 150,
+          "divers": 85,
+          "total": 1505
+        }
+      },
+      "prix_vente_t": 38,
+      "source_prix": "CGB 2022 — prix racines fraîches"
+    },
+    {
+      "value": "pomme_de_terre",
+      "label": "Pomme de terre",
+      "rendement_optimal_t_ha": 45.0,
+      "unite": "t/ha",
+      "source_reference": "UNPT 2022",
+      "notes": "Rendement variable selon destination (industrie vs consommation)",
+      "charges_ha": {
+        "argileux": {
+          "semences": 900,
+          "engrais": 380,
+          "phytosanitaires": 650,
+          "mecanisation": 900,
+          "irrigation": 150,
+          "divers": 160,
+          "total": 3140
+        },
+        "limoneux": {
+          "semences": 900,
+          "engrais": 400,
+          "phytosanitaires": 600,
+          "mecanisation": 800,
+          "irrigation": 300,
+          "divers": 150,
+          "total": 3150
+        },
+        "sableux": {
+          "semences": 900,
+          "engrais": 450,
+          "phytosanitaires": 580,
+          "mecanisation": 780,
+          "irrigation": 450,
+          "divers": 160,
+          "total": 3320
+        }
+      },
+      "prix_vente_t": 180,
+      "source_prix": "UNPT 2022 — prix industrie"
+    },
+    {
+      "value": "lin",
+      "label": "Lin",
+      "rendement_optimal_t_ha": 1.4,
+      "unite": "t/ha",
+      "source_reference": "CELC / Terres Inovia 2022",
+      "notes": "Rendement en graines. Lin fibre : 7-9 t/ha de paille",
+      "charges_ha": {
+        "argileux": {
+          "semences": 70,
+          "engrais": 140,
+          "phytosanitaires": 135,
+          "mecanisation": 220,
+          "irrigation": 0,
+          "divers": 40,
+          "total": 605
+        },
+        "limoneux": {
+          "semences": 70,
+          "engrais": 150,
+          "phytosanitaires": 120,
+          "mecanisation": 180,
+          "irrigation": 0,
+          "divers": 35,
+          "total": 555
+        },
+        "sableux": {
+          "semences": 70,
+          "engrais": 180,
+          "phytosanitaires": 115,
+          "mecanisation": 170,
+          "irrigation": 50,
+          "divers": 40,
+          "total": 625
+        }
+      },
+      "prix_vente_t": 550,
+      "source_prix": "CELC 2022 — prix graines"
+    },
+    {
+      "value": "pois",
+      "label": "Pois",
+      "rendement_optimal_t_ha": 4.5,
+      "unite": "t/ha",
+      "source_reference": "UNIP 2022",
+      "notes": "Légumineuse, fixation azote. Sensible à l'excès d'humidité",
+      "charges_ha": {
+        "argileux": {
+          "semences": 130,
+          "engrais": 50,
+          "phytosanitaires": 125,
+          "mecanisation": 240,
+          "irrigation": 0,
+          "divers": 40,
+          "total": 585
+        },
+        "limoneux": {
+          "semences": 130,
+          "engrais": 60,
+          "phytosanitaires": 110,
+          "mecanisation": 190,
+          "irrigation": 0,
+          "divers": 35,
+          "total": 525
+        },
+        "sableux": {
+          "semences": 130,
+          "engrais": 80,
+          "phytosanitaires": 105,
+          "mecanisation": 180,
+          "irrigation": 40,
+          "divers": 40,
+          "total": 575
+        }
+      },
+      "prix_vente_t": 280,
+      "source_prix": "UNIP 2022"
+    },
+    {
+      "value": "luzerne",
+      "label": "Luzerne",
+      "rendement_optimal_t_ha": 12.0,
+      "unite": "t/ha",
+      "source_reference": "Arvalis / FNAMS 2022",
+      "notes": "Rendement MS sur 3-4 coupes/an. Résistante à la sécheresse",
+      "charges_ha": {
+        "argileux": {
+          "semences": 80,
+          "engrais": 80,
+          "phytosanitaires": 55,
+          "mecanisation": 380,
+          "irrigation": 0,
+          "divers": 45,
+          "total": 640
+        },
+        "limoneux": {
+          "semences": 80,
+          "engrais": 90,
+          "phytosanitaires": 50,
+          "mecanisation": 320,
+          "irrigation": 0,
+          "divers": 40,
+          "total": 580
+        },
+        "sableux": {
+          "semences": 80,
+          "engrais": 110,
+          "phytosanitaires": 45,
+          "mecanisation": 310,
+          "irrigation": 80,
+          "divers": 45,
+          "total": 670
+        }
+      },
+      "prix_vente_t": 95,
+      "source_prix": "FNAMS 2022 — prix MS déshydratée"
+    },
+    {
+      "value": "prairie",
+      "label": "Prairie",
+      "rendement_optimal_t_ha": 8.0,
+      "unite": "t/ha",
+      "source_reference": "Institut de l'Elevage 2022",
+      "notes": "Rendement MS, très variable selon espèces et gestion (fauche/pâture)",
+      "charges_ha": {
+        "argileux": {
+          "semences": 50,
+          "engrais": 90,
+          "phytosanitaires": 25,
+          "mecanisation": 220,
+          "irrigation": 0,
+          "divers": 35,
+          "total": 420
+        },
+        "limoneux": {
+          "semences": 50,
+          "engrais": 100,
+          "phytosanitaires": 20,
+          "mecanisation": 180,
+          "irrigation": 0,
+          "divers": 30,
+          "total": 380
+        },
+        "sableux": {
+          "semences": 50,
+          "engrais": 120,
+          "phytosanitaires": 20,
+          "mecanisation": 170,
+          "irrigation": 40,
+          "divers": 35,
+          "total": 435
+        }
+      },
+      "prix_vente_t": 80,
+      "source_prix": "Institut de l Elevage 2022 — prix foin MS"
     }
-  },
-  {
-    "code": "MIS",
-    "libelle": "Maïs grain",
-    "categorie": "Céréales",
-    "parametres_agronomiques": {
-      "temperature_base_celsius": 6,
-      "regles_semis": {
-        "temperature_sol_min_celsius": 10,
-        "pluie_prevue_min_mm": 10,
-        "pluie_prevue_max_mm": 35
-      }
+  ],
+  "metadata": {
+    "version": "1.3",
+    "description": "Rendements optimaux + charges opérationnelles par hectare selon le type de sol (France). Rendement à pondérer par le score de risque météo IA.",
+    "pays": "France",
+    "annee_reference": 2022,
+    "devise": "EUR",
+    "types_sol": {
+      "argileux": "Rétention eau élevée, labour difficile, mécanisation plus lourde. Favorise blé, colza, betterave.",
+      "limoneux": "Sol de référence, structure idéale, charges standard. Polyvalent.",
+      "sableux": "Drainage rapide, engrais lessivés, irrigation souvent nécessaire. Favorable pomme de terre, soja."
     },
-    "donnees_economiques": {
-      "rendement_moyen": 9.5,
-      "prix_vente_tonne": 195.0,
-      "charge_semences_ha": 180.0,
-      "charge_engrais_ha": 380.0,
-      "charge_phytos_ha": 150.0
-    },
-    "affinites_sol": {
-      "argileux": { "bonus_rendement": 1.05, "note": "Bonne réserve en eau, favorable au maïs." },
-      "limoneux": { "bonus_rendement": 1.0, "note": "Conditions optimales pour le développement racinaire." },
-      "sableux": { "bonus_rendement": 0.7, "note": "Attention : rendement très dépendant de l'irrigation sur ce sol." }
-    }
-  },
-  {
-    "code": "CZH",
-    "libelle": "Colza d'hiver",
-    "categorie": "Oléagineux",
-    "parametres_agronomiques": {
-      "temperature_base_celsius": 5,
-      "regles_semis": {
-        "temperature_sol_min_celsius": 8,
-        "pluie_prevue_min_mm": 10,
-        "pluie_prevue_max_mm": 30
-      }
-    },
-    "donnees_economiques": {
-      "rendement_moyen": 3.5,
-      "prix_vente_tonne": 460.0,
-      "charge_semences_ha": 90.0,
-      "charge_engrais_ha": 320.0,
-      "charge_phytos_ha": 220.0
-    },
-    "affinites_sol": {
-      "argileux": { "bonus_rendement": 1.1, "note": "Le colza apprécie les terres à forte teneur en argile." },
-      "limoneux": { "bonus_rendement": 1.0, "note": "Bonne implantation possible." },
-      "sableux": { "bonus_rendement": 0.85, "note": "L'enracinement peut être difficile si le sol est trop filtrant." }
-    }
-  },
-  {
-    "code": "TRN",
-    "libelle": "Tournesol",
-    "categorie": "Oléagineux",
-    "parametres_agronomiques": {
-      "temperature_base_celsius": 6,
-      "regles_semis": {
-        "temperature_sol_min_celsius": 8,
-        "pluie_prevue_min_mm": 10,
-        "pluie_prevue_max_mm": 30
-      }
-    },
-    "donnees_economiques": {
-      "rendement_moyen": 2.5,
-      "prix_vente_tonne": 420.0,
-      "charge_semences_ha": 110.0,
-      "charge_engrais_ha": 150.0,
-      "charge_phytos_ha": 120.0
-    },
-    "affinites_sol": {
-      "argileux": { "bonus_rendement": 0.95, "note": "Risque de tassement gênant le pivot racinaire." },
-      "limoneux": { "bonus_rendement": 1.0, "note": "Sol idéal pour une levée régulière." },
-      "sableux": { "bonus_rendement": 1.1, "note": "Excellent choix : le tournesol valorise bien les terres légères." }
-    }
-  },
-  {
-    "code": "ORG",
-    "libelle": "Orge d'hiver",
-    "categorie": "Céréales",
-    "parametres_agronomiques": {
-      "temperature_base_celsius": 0,
-      "regles_semis": {
-        "temperature_sol_min_celsius": 8,
-        "pluie_prevue_min_mm": 5,
-        "pluie_prevue_max_mm": 25
-      }
-    },
-    "donnees_economiques": {
-      "rendement_moyen": 6.8,
-      "prix_vente_tonne": 190.0,
-      "charge_semences_ha": 110.0,
-      "charge_engrais_ha": 300.0,
-      "charge_phytos_ha": 180.0
-    },
-    "affinites_sol": {
-      "argileux": { "bonus_rendement": 1.05, "note": "Très bon potentiel de rendement." },
-      "limoneux": { "bonus_rendement": 1.0, "note": "Adaptation parfaite." },
-      "sableux": { "bonus_rendement": 0.9, "note": "Correct, mais maturité parfois trop rapide en cas de sécheresse." }
-    }
-  },
-  {
-    "code": "BTR",
-    "libelle": "Betterave sucrière",
-    "categorie": "Industrielles",
-    "parametres_agronomiques": {
-      "temperature_base_celsius": 2,
-      "regles_semis": {
-        "temperature_sol_min_celsius": 10,
-        "pluie_prevue_min_mm": 10,
-        "pluie_prevue_max_mm": 30
-      }
-    },
-    "donnees_economiques": {
-      "rendement_moyen": 82.0,
-      "prix_vente_tonne": 45.0,
-      "charge_semences_ha": 260.0,
-      "charge_engrais_ha": 420.0,
-      "charge_phytos_ha": 350.0
-    },
-    "affinites_sol": {
-      "argileux": { "bonus_rendement": 1.1, "note": "Potentiel sucre élevé dans ces terres riches." },
-      "limoneux": { "bonus_rendement": 1.1, "note": "Le sol de prédilection de la betterave." },
-      "sableux": { "bonus_rendement": 0.7, "note": "À éviter : trop de stress hydrique pour la racine." }
-    }
-  },
-  {
-    "code": "AVN",
-    "libelle": "Avoine",
-    "categorie": "Céréales",
-    "parametres_agronomiques": {
-      "temperature_base_celsius": 2,
-      "regles_semis": {
-        "temperature_sol_min_celsius": 6,
-        "pluie_prevue_min_mm": 5,
-        "pluie_prevue_max_mm": 25
-      }
-    },
-    "donnees_economiques": {
-      "rendement_moyen": 5.2,
-      "prix_vente_tonne": 200.0,
-      "charge_semences_ha": 105.0,
-      "charge_engrais_ha": 210.0,
-      "charge_phytos_ha": 130.0
-    },
-    "affinites_sol": {
-      "argileux": { "bonus_rendement": 1.0, "note": "Culture rustique qui s'adapte bien." },
-      "limoneux": { "bonus_rendement": 1.05, "note": "Favorise une bonne croissance." },
-      "sableux": { "bonus_rendement": 1.0, "note": "L'avoine supporte mieux les sols pauvres que le blé." }
-    }
+    "charges_incluses": [
+      "semences",
+      "engrais (N, P, K)",
+      "phytosanitaires (herbicides, fongicides, insecticides)",
+      "mécanisation (travail du sol, semis, récolte, transport)",
+      "irrigation (si applicable selon sol et culture)",
+      "divers (assurance, conseil, analyses sol)"
+    ],
+    "charges_non_incluses": [
+      "fermage / foncier",
+      "amortissement matériel",
+      "main d'oeuvre salariée",
+      "charges de structure"
+    ],
+    "formule_marge_brute": "MB (€/ha) = (rendement_optimal_t_ha * facteur_risque_meteo * prix_vente_t) - charges_ha[type_sol].total",
+    "usage_facteur_risque": "facteur_risque_meteo : float entre 0.0 (catastrophe) et 1.0 (conditions idéales), calculé par l'IA"
   }
-]
+}
