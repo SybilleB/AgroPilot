@@ -7,7 +7,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
+  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
   Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -87,6 +87,7 @@ export default function ProfileSetupScreen() {
 
   const [step, setStep]             = useState(1);
   const [loading, setLoading]       = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
   const [error, setError]           = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -127,10 +128,10 @@ export default function ProfileSetupScreen() {
 
   // ── Chargement données existantes ─────────────────────────────────────────────
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setLoadingData(false); return; }
     (async () => {
       const existing = await getFullProfile(user.id);
-      if (!existing) return;
+      if (!existing) { setLoadingData(false); return; }
       setIsEditMode(true);
 
       const { profile: p, exploitation: e, cultures: c } = existing;
@@ -165,6 +166,7 @@ export default function ProfileSetupScreen() {
           surface_ha:   h.surface_ha != null ? String(h.surface_ha) : '',
         })));
       }
+      setLoadingData(false);
     })();
   }, [user]);
 
@@ -221,6 +223,17 @@ export default function ProfileSetupScreen() {
   const STEP_LABELS = ['Situation', 'Exploitation', 'Assolement'];
 
   // ─────────────────────────────────────────────────────────────────────────────
+  if (loadingData) {
+    return (
+      <View style={[s.root, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={{ marginTop: 16, fontSize: 14, color: Colors.textMuted }}>
+          Chargement de votre profil…
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView

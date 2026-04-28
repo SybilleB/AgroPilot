@@ -1,7 +1,7 @@
 /**
  * app/(app)/index.tsx — Tableau de bord principal
  */
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Head from 'expo-router/head';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -47,6 +47,32 @@ export default function DashboardScreen() {
   const now    = new Date();
   const hour   = now.getHours();
   const salut  = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
+
+  if (loading) {
+    return (
+      <View style={s.loadScreen}>
+        <View style={[s.header, { paddingTop: insets.top + 24, paddingHorizontal: 22, paddingBottom: 32 }]}>
+          <View style={s.headerTop}>
+            <View style={s.logoRow}>
+              <Image
+                source={require('@/assets/images/AgroPilot_icon_white.png')}
+                style={s.logoIcon}
+                resizeMode="contain"
+              />
+              <View>
+                <Text style={s.logoName}>AgroPilot</Text>
+                <Text style={s.logoTagline}>PRÉVISION AGRICOLE</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+        <View style={s.loadCenter}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={s.loadText}>Chargement de votre exploitation…</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <>
@@ -173,6 +199,9 @@ export default function DashboardScreen() {
 const s = StyleSheet.create({
   root:      { flex: 1, backgroundColor: Colors.background },
   container: { paddingHorizontal: 0 },
+  loadScreen:{ flex: 1, backgroundColor: Colors.background },
+  loadCenter:{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
+  loadText:  { fontSize: 14, color: Colors.textMuted },
 
   // Header
   header: {
