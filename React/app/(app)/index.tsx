@@ -1,35 +1,29 @@
 /**
- * app/(app)/index.tsx — Tableau de bord principal AgroPilot
+ * app/(app)/index.tsx — Tableau de bord AgroPilot
  */
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfile } from '@/hooks/useProfile';
 import { Colors } from '@/constants/Colors';
 
-// ─── Composant Widget Météo Interactif ────────────────────────────────────────
+// ─── Composant Widget Météo ───────────────────────────────────
 
 function MeteoWidget({ commune, condition, temp, onPress }: { commune?: string, condition: string, temp: string, onPress: () => void }) {
-
   const getMeteoStyle = () => {
-    // On passe tout en minuscule pour être sûr de matcher les mots-clés
     const cond = condition.toLowerCase();
-
-    if (cond.includes("nuage") || cond.includes("couvert")) {
+    if (cond.includes("nuage") || cond.includes("couvert"))
       return { icon: "☁️", advice: "Ciel couvert : idéal pour l'entretien du matériel." };
-    }
-    if (cond.includes("pluie") || cond.includes("averse")) {
+    if (cond.includes("pluie") || cond.includes("averse"))
       return { icon: "🌧️", advice: "Risque de lessivage : différez l'épandage." };
-    }
-    if (cond.includes("vent")) {
+    if (cond.includes("vent"))
       return { icon: "💨", advice: "Vent fort : attention à la dérive des produits." };
-    }
-    if (cond.includes("orage") || cond.includes("grêle")) {
-      return { icon: "⛈️", advice: "Alerte orage : surveillez vos parcelles." };
-    }
+    if (cond.includes("orage") || cond.includes("grêle"))
+      return { icon: "⛈️", advice: "Alerte orage : mettez le matériel à l'abri." };
 
-    // Valeur par défaut si rien ne correspond (Soleil)
-    return { icon: "☀️", advice: "Aucune intempérie à venir : conditions optimales." };
+    return { icon: "☀️", advice: "Conditions optimales pour les travaux de sol." };
   };
 
   const { icon, advice } = getMeteoStyle();
@@ -52,67 +46,119 @@ function MeteoWidget({ commune, condition, temp, onPress }: { commune?: string, 
   );
 }
 
-// ─── Carte de navigation ──────────────────────────────────────────────────────
+// ─── Composant Widget Subvention ──────────────────────────────
 
-function NavCard({
-  icon, title, desc, badge, onPress,
-}: {
-  icon: string; title: string; desc: string; badge?: string; onPress: () => void;
-}) {
+function SubventionWidget({ card, loading, onPress }: { card: any, loading: boolean, onPress: () => void }) {
+  if (loading) {
+    return <View style={s.meteoWidget}><ActivityIndicator color={Colors.primary} /></View>;
+  }
+
+  if (!card) {
+    return (
+      <TouchableOpacity style={s.meteoWidget} onPress={onPress} activeOpacity={0.9}>
+        <View style={s.subHeader}>
+          <Text style={s.aiLabelMeteo}>SUBVENTIONS DISPONIBLES</Text>
+          <View style={s.badgePill}><Text style={s.badgePillText}>0 aide</Text></View>
+        </View>
+        <Text style={s.subAmountText}>0 € <Text style={s.subLabelSmall}>potentiel total</Text></Text>
+        <View style={s.meteoDivider} />
+        <View style={s.subFooter}>
+          <Text style={[s.meteoAdviceText, { color: Colors.primary }]}>Lancer l'analyse IA du profil</Text>
+          <Text style={s.subArrow}>→</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      style={[s.meteoWidget, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0', borderWidth: 1 }]}
+      onPress={onPress}
+      activeOpacity={0.9}
+    >
+      <View style={s.subHeader}>
+        <Text style={s.aiLabelMeteo}>TOP ÉLIGIBILITÉ</Text>
+        <Text style={s.subScore}>⭐ {card.score}/5</Text>
+      </View>
+      <Text style={s.subTitleText}>{card.nom}</Text>
+      <Text style={s.subAmountText}>{card.montant_label}</Text>
+      <View style={s.meteoDivider} />
+      <View style={s.subFooter}>
+        <Text style={s.meteoAdviceText}>Voir les détails et démarches</Text>
+        <Text style={s.subArrow}>→</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// ─── Carte de navigation ──────────────────────────────────────
+
+function NavCard({ icon, title, desc, badge, onPress }: any) {
   return (
     <TouchableOpacity style={s.navCard} onPress={onPress} activeOpacity={0.85}>
       <View style={s.navCardLeft}>
-        <View style={s.navIconBox}>
-          <Text style={s.navIcon}>{icon}</Text>
-        </View>
+        <View style={s.navIconBox}><Text style={s.navIcon}>{icon}</Text></View>
         <View style={s.navCardText}>
           <Text style={s.navCardTitle}>{title}</Text>
           <Text style={s.navCardDesc}>{desc}</Text>
         </View>
       </View>
       <View style={s.navCardArrow}>
-        {badge ? <View style={s.badgePill}><Text style={s.badgePillText}>{badge}</Text></View> : null}
+        {badge && <View style={s.badgePill}><Text style={s.badgePillText}>{badge}</Text></View>}
         <Text style={s.arrowText}>›</Text>
       </View>
     </TouchableOpacity>
   );
 }
 
-// ─── Écran Principal ──────────────────────────────────────────────────────────
+// ─── Écran Principal ──────────────────────────────────────────
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { fullProfile, isComplete, loading } = useProfile();
+  const { fullProfile } = useProfile();
 
-  const prenom = fullProfile?.profile?.prenom;
+  const [topSub, setTopSub] = useState<any>(null);
+  const [subLoading, setSubLoading] = useState(true);
+  const [meteo, setMeteo] = useState({ temp: "--°C", condition: "Chargement..." });
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadFreshData = async () => {
+        try {
+          const meteoCache = await AsyncStorage.getItem('agropilot_meteo_cache');
+          if (meteoCache) setMeteo(JSON.parse(meteoCache));
+
+          const subData = await AsyncStorage.getItem('agropilot_subventions_cache');
+          if (subData) {
+            const subs = JSON.parse(subData);
+            const best = subs.sort((a: any, b: any) => b.score - a.score)[0];
+            setTopSub(best);
+          }
+        } catch (e) { console.error(e); } finally { setSubLoading(false); }
+      };
+      loadFreshData();
+    }, [])
+  );
+
   const exploitation = fullProfile?.exploitation;
-
-  const now = new Date();
-  const hour = now.getHours();
-  const salut = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
+  const salut = new Date().getHours() < 18 ? 'Bonjour' : 'Bonsoir';
 
   return (
-    <ScrollView
-      style={s.root}
-      contentContainerStyle={[s.container, { paddingBottom: insets.bottom + 32 }]}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScrollView style={s.root} contentContainerStyle={{ paddingBottom: insets.bottom + 32 }} showsVerticalScrollIndicator={false}>
 
-      {/* ─── HEADER ─────────────────────────────────────────────────────── */}
+      {/* HEADER VERT FONCÉ */}
       <View style={[s.header, { paddingTop: insets.top + 24 }]}>
         <View style={s.headerTop}>
           <View style={s.logoRow}>
-            <View style={s.logoSquare}>
-              <Text style={s.logoLetter}>A</Text>
-            </View>
+            <View style={s.logoSquare}><Text style={s.logoLetter}>A</Text></View>
             <View>
               <Text style={s.logoName}>AgroPilot</Text>
               <Text style={s.logoTagline}>PRÉVISION AGRICOLE</Text>
             </View>
           </View>
           <View style={s.greetingBox}>
-            <Text style={s.greeting}>{salut}{prenom ? `, ${prenom}` : ''}</Text>
+            <Text style={s.greeting}>{salut}{fullProfile?.profile?.prenom ? `, ${fullProfile.profile.prenom}` : ''}</Text>
             <Text style={s.greetingSub}>{exploitation?.commune || "Votre exploitation"}</Text>
           </View>
         </View>
@@ -127,208 +173,86 @@ export default function DashboardScreen() {
             <Text style={s.metricValue}>{fullProfile?.cultures?.length ?? '—'}</Text>
             <Text style={s.metricLabel}>cultures</Text>
           </View>
-          <View style={s.metricDivider} />
-          <View style={s.metricBox}>
-            <Text style={s.metricValue}>{exploitation?.type_exploitation ? 'Actif' : '—'}</Text>
-            <Text style={s.metricLabel}>statut</Text>
-          </View>
         </View>
       </View>
 
-      {/* ─── WIDGET MÉTÉO ───────────────────────────────────────────────── */}
       <MeteoWidget
         commune={exploitation?.commune}
-        condition="Nuageux" // <--- TEST : Remplace par "Pluie" ou "Orage" pour voir l'emoji changer !
-        temp="14°C"        // <--- Tu peux aussi changer la température ici
+        condition={meteo.condition}
+        temp={meteo.temp}
         onPress={() => router.push('/(app)/meteo')}
       />
 
-      {/* ─── BANNIÈRE PROFIL INCOMPLET ───────────────────────────────────── */}
-      {!loading && !isComplete && (
-        <TouchableOpacity
-          style={s.banner}
-          onPress={() => router.push('/profile-setup')}
-          activeOpacity={0.88}
-        >
-          <View style={s.bannerLeft}>
-            <View style={s.bannerDot} />
-            <View style={{ flex: 1 }}>
-              <Text style={s.bannerTitle}>Complétez votre profil</Text>
-              <Text style={s.bannerDesc}>
-                Nécessaire pour l'analyse IA des subventions et calculs de marges.
-              </Text>
-            </View>
-          </View>
-          <Text style={s.bannerArrow}>›</Text>
-        </TouchableOpacity>
-      )}
+      <SubventionWidget card={topSub} loading={subLoading} onPress={() => router.push('/(app)/subventions')} />
 
-      {/* ─── SECTION "VOS OUTILS" ────────────────────────────────────────── */}
       <Text style={s.sectionLabel}>VOS OUTILS</Text>
-
-      <NavCard
-        icon="📈"
-        title="Simulation de rentabilité"
-        desc="Calculez votre marge nette par hectare"
-        badge="Nouveau"
-        onPress={() => router.push('/(app)/rentabilite')}
-      />
-
-      <NavCard
-        icon="🌦️"
-        title="Météo de l'exploitation"
-        desc="Radar et prévisions agricoles à 7 jours"
-        onPress={() => router.push('/(app)/meteo')}
-      />
-
-      <NavCard
-        icon="💶"
-        title="Subventions disponibles"
-        desc="PAC et aides régionales filtrées pour vous"
-        onPress={() => router.push('/(app)/subventions')}
-      />
-
-      {/* ─── BLOC "ANALYSE IA" ───────────────────────────────────────────── */}
-      <View style={s.aiCard}>
-        <Text style={s.aiLabel}>ANALYSE IA</Text>
-        <Text style={s.aiTitle}>Votre copilote financier est prêt</Text>
-        <Text style={s.aiBody}>
-          {isComplete
-            ? `Votre profil est complet. L'IA peut désormais analyser vos subventions en temps réel.`
-            : `Complétez votre profil pour débloquer l'analyse complète de vos subventions.`
-          }
-        </Text>
-        {!isComplete && (
-          <TouchableOpacity style={s.aiBtn} onPress={() => router.push('/profile-setup')}>
-            <Text style={s.aiBtnText}>Configurer mon exploitation</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <NavCard icon="📈" title="Simulation de rentabilité" desc="Calculez votre marge nette par hectare" onPress={() => router.push('/(app)/rentabilite')} />
+      <NavCard icon="💶" title="Toutes les subventions" desc="Catalogue complet PAC et aides régionales" onPress={() => router.push('/(app)/subventions')} />
 
     </ScrollView>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  container: { paddingHorizontal: 0 },
-
+  root: { flex: 1, backgroundColor: '#F8FAF8' }, // Fond gris-vert très clair
   header: {
-    backgroundColor: Colors.headerBg,
+    backgroundColor: '#39811c', // VERT FONCÉ D'ORIGINE
     paddingHorizontal: 22,
     paddingBottom: 32,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    gap: 20,
     marginBottom: 22,
   },
-  headerTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logoSquare: { width: 38, height: 38, borderRadius: 11, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  logoSquare: { width: 38, height: 38, borderRadius: 11, backgroundColor: '#2E5A1C', alignItems: 'center', justifyContent: 'center' },
   logoLetter: { fontSize: 20, fontWeight: '900', color: '#fff' },
   logoName: { fontSize: 16, fontWeight: '800', color: '#fff' },
-  logoTagline: { fontSize: 8, color: Colors.headerTextMuted, letterSpacing: 2, marginTop: 1 },
-
+  logoTagline: { fontSize: 8, color: 'rgba(255,255,255,0.6)', letterSpacing: 2 },
   greetingBox: { alignItems: 'flex-end' },
   greeting: { fontSize: 15, fontWeight: '700', color: '#fff' },
-  greetingSub: { fontSize: 12, color: Colors.headerTextMuted, marginTop: 2 },
-
-  metricsRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 12 },
+  greetingSub: { fontSize: 12, color: 'rgba(255,255,255,0.6)' },
+  metricsRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 14, padding: 14 },
   metricBox: { flex: 1, alignItems: 'center' },
   metricValue: { fontSize: 20, fontWeight: '800', color: '#fff' },
-  metricLabel: { fontSize: 11, color: Colors.headerTextMuted, marginTop: 2 },
+  metricLabel: { fontSize: 11, color: 'rgba(255,255,255,0.6)' },
   metricDivider: { width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center' },
 
-  // Styles Widget Météo
   meteoWidget: {
     marginHorizontal: 22,
-    marginBottom: 25,
-    backgroundColor: Colors.white,
+    marginBottom: 20,
+    backgroundColor: '#FFF',
     borderRadius: 20,
     padding: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
     elevation: 4,
   },
   meteoMain: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  meteoCity: { fontSize: 14, fontWeight: '600', color: Colors.textMuted, textTransform: 'uppercase' },
-  meteoTemp: { fontSize: 38, fontWeight: '800', color: Colors.primaryDark },
+  meteoCity: { fontSize: 14, fontWeight: '600', color: '#666', textTransform: 'uppercase' },
+  meteoTemp: { fontSize: 38, fontWeight: '800', color: '#39811c' },
   meteoBigIcon: { fontSize: 45 },
-  meteoDivider: { height: 1, backgroundColor: Colors.border, marginVertical: 15, opacity: 0.5 },
+  meteoDivider: { height: 1, backgroundColor: '#EEE', marginVertical: 15 },
   meteoAdviceRow: { gap: 4 },
-  aiLabelMeteo: { fontSize: 10, fontWeight: '700', color: Colors.primary, letterSpacing: 1.5 },
-  meteoAdviceText: { fontSize: 13, color: Colors.primaryDark, fontWeight: '600', lineHeight: 18 },
+  aiLabelMeteo: { fontSize: 10, fontWeight: '700', color: '#2E5A1C', letterSpacing: 1.5 },
+  meteoAdviceText: { fontSize: 13, color: '#39811c', fontWeight: '600' },
 
-  banner: {
-    marginHorizontal: 22,
-    marginBottom: 20,
-    backgroundColor: Colors.warningBg,
-    borderRadius: 14,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#F0D080',
-  },
-  bannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1 },
-  bannerDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.warning, marginTop: 5 },
-  bannerTitle: { fontSize: 14, fontWeight: '700', color: '#5D3000', marginBottom: 3 },
-  bannerDesc: { fontSize: 12, color: '#7A4500', lineHeight: 17 },
-  bannerArrow: { fontSize: 22, color: Colors.warning, fontWeight: '700', paddingLeft: 8 },
+  subHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  subScore: { fontSize: 12, fontWeight: '700', color: '#39811c' },
+  subTitleText: { fontSize: 16, fontWeight: '700', color: '#39811c' },
+  subAmountText: { fontSize: 24, fontWeight: '800', color: '#39811c', marginTop: 4 },
+  subLabelSmall: { fontSize: 12, color: '#666' },
+  subFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  subArrow: { fontSize: 18, color: '#39811c', fontWeight: '700' },
 
-  sectionLabel: {
-    marginHorizontal: 22,
-    marginBottom: 12,
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.primary,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
-
-  navCard: {
-    marginHorizontal: 22,
-    marginBottom: 10,
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  navCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
-  navIconBox: { width: 48, height: 48, borderRadius: 14, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  sectionLabel: { marginHorizontal: 22, marginBottom: 12, fontSize: 11, fontWeight: '700', color: '#2E5A1C', letterSpacing: 2 },
+  navCard: { marginHorizontal: 22, marginBottom: 10, backgroundColor: '#fff', borderRadius: 16, padding: 18, flexDirection: 'row', alignItems: 'center', elevation: 2 },
+  navCardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 14 },
+  navIconBox: { width: 48, height: 48, borderRadius: 14, backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center' },
   navIcon: { fontSize: 22 },
-  navCardText: { flex: 1, gap: 3 },
-  navCardTitle: { fontSize: 15, fontWeight: '700', color: Colors.primaryDark },
-  navCardDesc: { fontSize: 12, color: Colors.textMuted, lineHeight: 17 },
+  navCardText: { flex: 1 },
+  navCardTitle: { fontSize: 15, fontWeight: '700', color: '#1A3A0F' },
+  navCardDesc: { fontSize: 12, color: '#666' },
   navCardArrow: { alignItems: 'center', gap: 6 },
-  arrowText: { fontSize: 22, color: Colors.textMuted, fontWeight: '300' },
-  badgePill: { backgroundColor: Colors.primaryBg, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
-  badgePillText: { fontSize: 10, fontWeight: '700', color: Colors.primary },
-
-  aiCard: {
-    marginHorizontal: 22,
-    marginTop: 10,
-    marginBottom: 20,
-    backgroundColor: Colors.aiCardBg,
-    borderRadius: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.aiCardBorder,
-    padding: 20,
-    gap: 8,
-  },
-  aiLabel: { fontSize: 10, fontWeight: '700', color: Colors.primary, letterSpacing: 2, textTransform: 'uppercase' },
-  aiTitle: { fontSize: 17, fontWeight: '800', color: Colors.primaryDark },
-  aiBody: { fontSize: 13, color: Colors.textMuted, lineHeight: 20 },
-  aiBtn: { marginTop: 4, backgroundColor: Colors.primary, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  aiBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  arrowText: { fontSize: 22, color: '#CCC' },
+  badgePill: { backgroundColor: '#F0FDF4', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
+  badgePillText: { fontSize: 10, fontWeight: '700', color: '#2E5A1C' },
 });
