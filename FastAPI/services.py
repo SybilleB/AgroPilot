@@ -43,7 +43,7 @@ async def get_previsions_meteo(lat: float, lon: float):
     parametres = {
         "latitude": lat,
         "longitude": lon,
-        "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,soil_temperature_6cm",
+        "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum",
         "timezone": "Europe/Paris",
         "forecast_days": 7
     }
