@@ -325,10 +325,7 @@ def build_recherche_prompt(question: str, cultures: List[str], search_results: L
 
 
 _GEMINI_MODELS = [
-    "gemini-2.5-flash-preview-04-17",
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-1.5-flash",
+    "models/gemini-3.1-flash-lite-preview", "models/gemini-3-flash-preview", "models/gemini-2.0-flash", "models/gemini-flash-latest"
 ]
 
 
@@ -514,18 +511,24 @@ async def recherche_marche(req: RechercheRequest):
 
 
 @app.post("/api/ia/recommandations")
-async def get_recommandations(payload: RecommandationPayload):
-    type_label = TYPE_LABELS.get(payload.type_exploitation or "", "agriculteur")
-    sol        = payload.type_sol or "limoneux"
-    hec        = payload.surface_ha or 100
-    region     = payload.region or payload.departement or "France"
-    methode    = METHODE_LABELS.get(payload.methode_production or "", "agriculture conventionnelle")
+async def get_recommandations(payload: RequeteTop3):
+    
+    # 1. On sécurise les champs "optionnels" qui ne sont pas dans RequeteTop3
+    type_label = TYPE_LABELS.get(getattr(payload, "type_exploitation", ""), "agriculteur")
+    methode    = METHODE_LABELS.get(getattr(payload, "methode_production", ""), "agriculture conventionnelle")
+    region     = getattr(payload, "region", getattr(payload, "departement", "France"))
+    
+    # 2. On utilise les champs obligatoires qui SONT dans RequeteTop3
+    sol = payload.type_sol
+    hec = payload.hectares
 
+    # 3. Calculs mathématiques
     marges = calculer_marges_rapide(CULTURES_DB, hec, sol)
     marges_txt = "\n".join(
         ["  - " + k + ": " + "{:,.0f}".format(v).replace(",", " ") + " EUR/an (estime)" for k, v in sorted(marges.items(), key=lambda x: -x[1])[:5]]
     ) if marges else "  Donnees de marges non disponibles."
 
+    # 4. Le Prompt
     prompt = (
         "Tu es un conseiller agronomique expert. Donne les 3 meilleures cultures a recommander.\n"
         "## Exploitation\n"
@@ -539,6 +542,7 @@ async def get_recommandations(payload: RecommandationPayload):
         '{"culture":"...","score":8,"raison_principale":"...","marge_estimee":"... EUR/ha","risques":"...","opportunites":"..."}'
         ']}\n'
     )
+    
     data = await call_gemini_json(prompt)
     if not isinstance(data, dict):
         data = {}
@@ -546,7 +550,7 @@ async def get_recommandations(payload: RecommandationPayload):
 
 
 @app.post("/api/ia/generer-conseil")
-async def generer_conseil(payload: ConseilPayload):
+async def generer_conseil(payload: RequeteIA):
     type_label = TYPE_LABELS.get(payload.type_exploitation or "", "agriculteur")
     sol        = payload.type_sol or "limoneux"
     hec        = payload.surface_ha or 100
