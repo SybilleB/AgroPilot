@@ -1,11 +1,23 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 class RequeteTop3(BaseModel):
-    hectares: float
-    type_sol: str         
-    latitude: float
-    longitude: float
+    # ── Exploitation ─────────────────────────────────────────────────────────
+    hectares:             float
+    type_sol:             str
+    latitude:             float
+    longitude:            float
+    # ── Production ───────────────────────────────────────────────────────────
+    cultures_souhaitees:  Optional[List[str]]        = None   # cultures ciblées
+    mode_production:      Optional[str]              = None   # conventionnel | raisonne | bio
+    irrigation:           Optional[bool]             = None   # accès à l'irrigation
+    # ── Données économiques réelles de l'agriculteur ──────────────────────────
+    rendement_habituel_t_ha: Optional[float]         = None   # rendement moyen connu (t/ha)
+    prix_vente_vise_eur_t:   Optional[float]         = None   # prix de vente visé (€/t)
+    fermage_eur_ha:          Optional[float]         = None   # loyer foncier (€/ha/an)
+    charges_variables_eur_ha: Optional[float]        = None   # phyto+engrais+semences (€/ha)
+    mode_vente:              Optional[str]           = None   # cooperative|negoce|circuit_court|contrat
+    prix_vente_custom:    Optional[Dict[str, float]] = None   # €/t par culture (legacy)
 
 class RecommandationCulture(BaseModel):
     nom_culture: str = Field(description="Le nom de la culture (ex: Blé tendre)")
@@ -107,3 +119,17 @@ class RechercheResultat(BaseModel):
     reponse:   str
     sources:   List[dict]
     horodatage: str
+
+class PrixLiveItem(BaseModel):
+    culture:       str
+    culture_key:   str
+    ticker:        str
+    marche:        str
+    prix_eur:      float
+    variation_pct: Optional[float] = None
+    tendance:      str                   # hausse / baisse / stable
+    historique:    List[float] = []      # 30 dernières clôtures en EUR/t
+
+class PrixLiveResponse(BaseModel):
+    items:     List[PrixLiveItem]
+    timestamp: str                       # heure de la requête HH:MM

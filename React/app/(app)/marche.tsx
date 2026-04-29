@@ -15,8 +15,9 @@ import Head from 'expo-router/head';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProfile } from '@/hooks/useProfile';
 import {
-  fetchMarcheAnalyse, fetchMarcheRecherche,
+  fetchMarcheAnalyse, fetchMarcheRecherche, fetchPrixLive,
   MarcheAnalyse, RechercheResultat, Recommandation, Actualite, PrixCulture,
+  PrixLiveItem, PrixLiveResponse,
 } from '@/services/marche.service';
 import {
   fetchRecommandations, fetchConseil,
@@ -50,6 +51,96 @@ function meteoColor(s: string) {
 }
 
 // ─── Composants Marchés ───────────────────────────────────────────────────────
+
+// ─── Sparkline (mini graphique View-based, pas de lib SVG requise) ────────────
+
+function Sparkline({ data, color }: { data: number[]; color: string }) {
+  if (!data || data.length < 3) return <View style={{ height: 36 }} />;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const BAR_H = 32;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: BAR_H + 4, gap: 2 }}>
+      {data.map((v, i) => {
+        const h = Math.max(3, Math.round(((v - min) / range) * BAR_H));
+        const isLast = i === data.length - 1;
+        return (
+          <View key={i} style={{
+            width: 3, height: h,
+            backgroundColor: isLast ? color : color + '55',
+            borderRadius: 2,
+          }} />
+        );
+      })}
+    </View>
+  );
+}
+
+// ─── PrixLiveCard ─────────────────────────────────────────────────────────────
+
+function PrixLiveCard({ item }: { item: PrixLiveItem }) {
+  const isHausse  = item.tendance === 'hausse';
+  const isBaisse  = item.tendance === 'baisse';
+  const mainColor = isHausse ? '#1A7A2A' : isBaisse ? '#C62828' : Colors.textMuted;
+  const bgColor   = isHausse ? '#E8F5E9' : isBaisse ? '#FFEBEE' : Colors.backgroundAlt;
+  const arrow     = isHausse ? '↑' : isBaisse ? '↓' : '→';
+  const varSign   = (item.variation_pct ?? 0) >= 0 ? '+' : '';
+  const varLabel  = item.variation_pct != null
+    ? `${varSign}${item.variation_pct.toFixed(2)}%`
+    : null;
+
+  return (
+    <View style={[pl.card, { backgroundColor: bgColor }]}>
+      <View style={pl.top}>
+        <View style={pl.titleRow}>
+          <Text style={pl.culture}>{item.culture}</Text>
+          <View style={pl.marcheBadge}>
+            <Text style={pl.marcheText}>{item.marche}</Text>
+          </View>
+        </View>
+        <View style={pl.priceRow}>
+          <Text style={[pl.price, { color: mainColor }]}>
+            {item.prix_eur.toFixed(1)} €/t
+          </Text>
+          {varLabel && (
+            <View style={[pl.varBadge, { backgroundColor: isHausse ? '#C8E6C9' : isBaisse ? '#FFCDD2' : Colors.border }]}>
+              <Text style={[pl.varText, { color: mainColor }]}>{arrow} {varLabel}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+      {item.historique.length > 2 && (
+        <View style={pl.chart}>
+          <Sparkline data={item.historique} color={mainColor} />
+          <View style={pl.chartLabels}>
+            <Text style={pl.chartLbl}>30j</Text>
+            <Text style={[pl.chartLbl, { color: mainColor, fontWeight: '700' }]}>
+              {item.historique[item.historique.length - 1]?.toFixed(0)} €
+            </Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+const pl = StyleSheet.create({
+  card:        { borderRadius: 16, padding: 16, gap: 10, flex: 1, minWidth: 160 },
+  top:         { gap: 6 },
+  titleRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
+  culture:     { fontSize: 13, fontWeight: '800', color: Colors.primaryDark, flex: 1 },
+  marcheBadge: { backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  marcheText:  { fontSize: 9, fontWeight: '700', color: Colors.textMuted, letterSpacing: 0.5 },
+  priceRow:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  price:       { fontSize: 20, fontWeight: '900' },
+  varBadge:    { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  varText:     { fontSize: 11, fontWeight: '700' },
+  chart:       { gap: 4 },
+  chartLabels: { flexDirection: 'row', justifyContent: 'space-between' },
+  chartLbl:    { fontSize: 10, color: Colors.textMuted },
+});
+
+// ─── Composants anciens (Analyse IA) ─────────────────────────────────────────
 
 function PrixPill({ item }: { item: PrixCulture }) {
   const isHausse = item.tendance === 'hausse';
@@ -225,6 +316,11 @@ export default function MarcheScreen() {
   const { fullProfile, isComplete } = useProfile();
   const [pageTab, setPageTab]   = useState<PageTab>('marche');
 
+  // ── État Prix Live ──────────────────────────────────────────────────────────
+  const [prixLive,     setPrixLive]    = useState<PrixLiveResponse | null>(null);
+  const [prixLoading,  setPrixLoading] = useState(false);
+  const prixIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // ── État Marchés ────────────────────────────────────────────────────────────
   const [analyse,     setAnalyse]     = useState<MarcheAnalyse | null>(null);
   const [mLoading,    setMLoading]    = useState(false);
@@ -290,6 +386,28 @@ export default function MarcheScreen() {
         .catch(() => {}).finally(() => setGeocoding(false));
     }
   }, [fullProfile]);
+
+  // ── Prix Live : fetch au montage + refresh toutes les 2 minutes ────────────
+  const buildPrixReq = () => ({
+    cultures: fullProfile?.cultures?.map(c => c.type_culture) ?? [],
+  });
+
+  const fetchPrix = async () => {
+    setPrixLoading(true);
+    try {
+      const res = await fetchPrixLive(buildPrixReq());
+      setPrixLive(res);
+    } catch { /* silencieux si hors-ligne */ }
+    finally { setPrixLoading(false); }
+  };
+
+  useEffect(() => {
+    fetchPrix();
+    prixIntervalRef.current = setInterval(fetchPrix, 2 * 60 * 1000);
+    return () => {
+      if (prixIntervalRef.current) clearInterval(prixIntervalRef.current);
+    };
+  }, []);
 
   // ── Animation loading Marchés ───────────────────────────────────────────────
   useEffect(() => {
@@ -452,6 +570,41 @@ export default function MarcheScreen() {
       {/* ════════════════════════════════════════════════════════════════════ */}
       {pageTab === 'marche' && (
         <>
+          {/* ── PRIX EN DIRECT ──────────────────────────────────────────────── */}
+          <View style={s.liveSection}>
+            <View style={s.liveTitleRow}>
+              <View style={s.liveDot} />
+              <Text style={s.liveSectionLabel}>COURS EN DIRECT</Text>
+              <Text style={s.liveTimestamp}>
+                {prixLive ? `Mis à jour ${prixLive.timestamp}` : prixLoading ? 'Chargement…' : ''}
+              </Text>
+              <TouchableOpacity onPress={fetchPrix} disabled={prixLoading} style={s.liveRefreshBtn}>
+                <Text style={s.liveRefreshTxt}>{prixLoading ? '…' : '↻'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {prixLoading && !prixLive && (
+              <View style={s.liveLoadRow}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={s.liveLoadTxt}>Connexion Yahoo Finance…</Text>
+              </View>
+            )}
+
+            {prixLive && prixLive.items.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.liveRow}>
+                {prixLive.items.map((item, i) => (
+                  <PrixLiveCard key={i} item={item} />
+                ))}
+              </ScrollView>
+            )}
+
+            {prixLive && prixLive.items.length === 0 && !prixLoading && (
+              <View style={s.liveEmpty}>
+                <Text style={s.liveEmptyTxt}>Cours indisponibles — vérifiez le serveur</Text>
+              </View>
+            )}
+          </View>
+
           {/* Progression */}
           {mLoading && (
             <View style={s.loadCard}>
@@ -818,4 +971,18 @@ const s = StyleSheet.create({
   locText:        { fontSize: 13, color: Colors.textMuted, flex: 1 },
   lastSim:        { fontSize: 11, color: Colors.textMuted, textAlign: 'center', marginTop: -8 },
   simHint:        { fontSize: 12, color: Colors.textMuted, marginTop: -4 },
+
+  // ── Section prix en direct ────────────────────────────────────────────────
+  liveSection:     { marginHorizontal: 22, marginBottom: 20, gap: 12 },
+  liveTitleRow:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  liveDot:         { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2ECC40' },
+  liveSectionLabel:{ fontSize: 11, fontWeight: '700', color: Colors.primary, letterSpacing: 2, textTransform: 'uppercase', flex: 1 },
+  liveTimestamp:   { fontSize: 10, color: Colors.textMuted },
+  liveRefreshBtn:  { width: 28, height: 28, borderRadius: 8, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  liveRefreshTxt:  { fontSize: 14, color: Colors.primary, fontWeight: '700' },
+  liveLoadRow:     { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  liveLoadTxt:     { fontSize: 13, color: Colors.textMuted },
+  liveRow:         { gap: 10, flexDirection: 'row', paddingBottom: 4 },
+  liveEmpty:       { backgroundColor: Colors.backgroundAlt, borderRadius: 12, padding: 14, alignItems: 'center' },
+  liveEmptyTxt:    { fontSize: 13, color: Colors.textMuted },
 });

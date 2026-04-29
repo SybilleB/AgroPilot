@@ -34,6 +34,34 @@ const SOLS = [
   { value: 'sableux',  label: 'Sableux'  },
 ];
 
+const CULTURES_LIST = [
+  { value: 'ble_tendre',     label: 'Blé tendre'  },
+  { value: 'ble_dur',        label: 'Blé dur'     },
+  { value: 'mais',           label: 'Maïs'        },
+  { value: 'colza',          label: 'Colza'       },
+  { value: 'tournesol',      label: 'Tournesol'   },
+  { value: 'orge',           label: 'Orge'        },
+  { value: 'soja',           label: 'Soja'        },
+  { value: 'pois',           label: 'Pois'        },
+  { value: 'betterave',      label: 'Betterave'   },
+  { value: 'pomme_de_terre', label: 'Pomme de terre' },
+  { value: 'lin',            label: 'Lin'         },
+  { value: 'prairie',        label: 'Prairie'     },
+];
+
+const MODES_PROD = [
+  { value: 'conventionnel', label: 'Conventionnel' },
+  { value: 'raisonne',      label: 'Raisonné'      },
+  { value: 'bio',           label: 'Bio'           },
+];
+
+const MODES_VENTE = [
+  { value: 'cooperative',   label: 'Coopérative'   },
+  { value: 'negoce',        label: 'Négoce'        },
+  { value: 'circuit_court', label: 'Circuit court' },
+  { value: 'contrat',       label: 'Contrat fixe'  },
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatEuros(n: number) {
@@ -167,10 +195,23 @@ export default function RentabiliteScreen() {
   const insets     = useSafeAreaInsets();
   const { fullProfile } = useProfile();
 
-  const [hectares,  setHectares]  = useState<number>(10);
-  const [typeSol,   setTypeSol]   = useState<string>('limoneux');
-  const [coords,    setCoords]    = useState<{ lat: number; lon: number } | null>(null);
-  const [geocoding, setGeocoding] = useState(false);
+  // ── Exploitation ─────────────────────────────────────────────────────────
+  const [hectares,         setHectares]         = useState<number>(10);
+  const [typeSol,          setTypeSol]          = useState<string>('limoneux');
+  const [coords,           setCoords]           = useState<{ lat: number; lon: number } | null>(null);
+  const [geocoding,        setGeocoding]        = useState(false);
+  // ── Production ───────────────────────────────────────────────────────────
+  const [culturesChoisies, setCulturesChoisies] = useState<string[]>([]);
+  const [modeProd,         setModeProd]         = useState<string>('conventionnel');
+  const [irrigation,       setIrrigation]       = useState<boolean>(false);
+  // ── Données économiques ───────────────────────────────────────────────────
+  const [rendementHa,    setRendementHa]    = useState<number>(0);   // 0 = non renseigné
+  const [prixVise,       setPrixVise]       = useState<number>(0);   // 0 = non renseigné
+  const [fermageHa,      setFermageHa]      = useState<number>(0);   // 0 = pas de fermage
+  const [chargesVarHa,   setChargesVarHa]   = useState<number>(0);   // 0 = non renseigné
+  const [modeVente,      setModeVente]      = useState<string>('negoce');
+  // ── Affichage avancé ─────────────────────────────────────────────────────
+  const [showAdvanced,   setShowAdvanced]   = useState<boolean>(false);
 
   const [resultat,   setResultat]   = useState<RecommandationCulture[] | null>(null);
   const [loading,    setLoading]    = useState(false);
@@ -209,12 +250,20 @@ export default function RentabiliteScreen() {
   useEffect(() => {
     AsyncStorage.getItem(CACHE_KEY).then(raw => {
       if (!raw) return;
-      const { data, ts, surface, sol } = JSON.parse(raw);
+      const { data, ts, surface, sol, cultures, mode, irrigation: irr, rendement, prix, fermage, charges, vente } = JSON.parse(raw);
       if (Date.now() - ts < CACHE_TTL) {
         setResultat(data);
         setLastUpdate(new Date(ts).toLocaleDateString('fr-FR'));
-        if (surface) setHectares(surface);
-        if (sol) setTypeSol(sol);
+        if (surface)                  setHectares(surface);
+        if (sol)                      setTypeSol(sol);
+        if (cultures?.length)         setCulturesChoisies(cultures);
+        if (mode)                     setModeProd(mode);
+        if (typeof irr === 'boolean') setIrrigation(irr);
+        if (rendement > 0)            setRendementHa(rendement);
+        if (prix > 0)                 setPrixVise(prix);
+        if (fermage > 0)              setFermageHa(fermage);
+        if (charges > 0)              setChargesVarHa(charges);
+        if (vente)                    setModeVente(vente);
       }
     }).catch(() => {});
   }, []);
@@ -241,13 +290,29 @@ export default function RentabiliteScreen() {
     if (!coords)                      { setError('Commune introuvable — vérifiez votre profil.'); return; }
     if (!hectares || hectares <= 0)   { setError('Saisissez une surface valide.'); return; }
     setError(''); setResultat(null); setSelectedIdx(null); setConseil(null); setLoading(true);
-    const req: RequeteTop3 = { hectares, type_sol: typeSol, latitude: coords.lat, longitude: coords.lon };
+    const req: RequeteTop3 = {
+      hectares,
+      type_sol:                  typeSol,
+      latitude:                  coords.lat,
+      longitude:                 coords.lon,
+      cultures_souhaitees:       culturesChoisies.length > 0 ? culturesChoisies : undefined,
+      mode_production:           modeProd,
+      irrigation,
+      rendement_habituel_t_ha:   rendementHa > 0 ? rendementHa : undefined,
+      prix_vente_vise_eur_t:     prixVise    > 0 ? prixVise    : undefined,
+      fermage_eur_ha:            fermageHa   > 0 ? fermageHa   : undefined,
+      charges_variables_eur_ha:  chargesVarHa > 0 ? chargesVarHa : undefined,
+      mode_vente:                modeVente,
+    };
     try {
       const res = await fetchRecommandations(req);
       setResultat(res.cultures_validees);
       setLastUpdate(new Date().toLocaleDateString('fr-FR'));
       await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({
-        data: res.cultures_validees, ts: Date.now(), surface: hectares, sol: typeSol,
+        data: res.cultures_validees, ts: Date.now(),
+        surface: hectares, sol: typeSol,
+        cultures: culturesChoisies, mode: modeProd, irrigation,
+        rendement: rendementHa, prix: prixVise, fermage: fermageHa, charges: chargesVarHa, vente: modeVente,
       }));
     } catch (e: any) {
       setError(e?.message ?? 'Erreur inattendue. Vérifiez que le serveur est démarré.');
@@ -263,8 +328,18 @@ export default function RentabiliteScreen() {
     setConseilLoading(true);
     try {
       const res = await fetchConseil({
-        hectares, type_sol: typeSol, latitude: coords.lat, longitude: coords.lon,
-        culture: culture.nom_culture,
+        hectares,
+        type_sol:                  typeSol,
+        latitude:                  coords.lat,
+        longitude:                 coords.lon,
+        culture:                   culture.nom_culture,
+        mode_production:           modeProd,
+        irrigation,
+        rendement_habituel_t_ha:   rendementHa  > 0 ? rendementHa  : undefined,
+        prix_vente_vise_eur_t:     prixVise     > 0 ? prixVise     : undefined,
+        fermage_eur_ha:            fermageHa    > 0 ? fermageHa    : undefined,
+        charges_variables_eur_ha:  chargesVarHa > 0 ? chargesVarHa : undefined,
+        mode_vente:                modeVente,
       });
       setConseil(res);
     } catch { /* silence */ } finally { setConseilLoading(false); }
@@ -290,8 +365,13 @@ export default function RentabiliteScreen() {
       </View>
 
       {/* ─── FORMULAIRE ──────────────────────────────────────────────────── */}
+
+      {/* ── Section 1 : Exploitation ─────────────────────────────────────── */}
       <View style={s.formCard}>
-        <Text style={s.formTitle}>Paramètres de simulation</Text>
+        <View style={s.formSectionHead}>
+          <Text style={s.formSectionIcon}>🏡</Text>
+          <Text style={s.formSectionTitle}>Exploitation</Text>
+        </View>
 
         <View style={s.field}>
           <Text style={s.fieldLabel}>Surface exploitée (ha)</Text>
@@ -310,7 +390,7 @@ export default function RentabiliteScreen() {
 
         <View style={s.field}>
           <Text style={s.fieldLabel}>Type de sol</Text>
-          <PillSelect options={SOLS} value={typeSol} onChange={v => setTypeSol(v as string)} multi={false} />
+          <PillSelect options={SOLS} value={typeSol} onChange={v => setTypeSol(v as string)} />
         </View>
 
         <View style={s.locRow}>
@@ -321,9 +401,177 @@ export default function RentabiliteScreen() {
               : 'Commune non configurée dans le profil'}
           </Text>
         </View>
+      </View>
 
+      {/* ── Section 2 : Cultures & production ────────────────────────────── */}
+      <View style={s.formCard}>
+        <View style={s.formSectionHead}>
+          <Text style={s.formSectionIcon}>🌾</Text>
+          <Text style={s.formSectionTitle}>Cultures & production</Text>
+        </View>
+
+        <View style={s.field}>
+          <View style={s.fieldLabelRow}>
+            <Text style={s.fieldLabel}>Cultures à simuler</Text>
+            <Text style={s.fieldHint}>
+              {culturesChoisies.length === 0 ? 'Auto — Top 3 IA' : `${culturesChoisies.length} choisie${culturesChoisies.length > 1 ? 's' : ''}`}
+            </Text>
+          </View>
+          <PillSelect
+            options={CULTURES_LIST}
+            value={culturesChoisies}
+            onChange={v => setCulturesChoisies(v as string[])}
+            multiSelect
+          />
+          {culturesChoisies.length > 0 && (
+            <TouchableOpacity onPress={() => setCulturesChoisies([])}>
+              <Text style={s.clearTxt}>Effacer la sélection</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={s.field}>
+          <Text style={s.fieldLabel}>Mode de production</Text>
+          <PillSelect options={MODES_PROD} value={modeProd} onChange={v => setModeProd(v as string)} />
+          <Text style={s.fieldSub}>
+            {modeProd === 'bio' ? 'Prix x2-3 · rendements -25% · certifications requises'
+              : modeProd === 'raisonne' ? 'Intrants réduits -25% · prix légèrement premium'
+              : 'Prix et rendements standards du marché'}
+          </Text>
+        </View>
+
+        <View style={s.field}>
+          <Text style={s.fieldLabel}>Irrigation disponible</Text>
+          <View style={s.irrigRow}>
+            <TouchableOpacity style={[s.irrigBtn, !irrigation && s.irrigBtnOn]} onPress={() => setIrrigation(false)}>
+              <Text style={[s.irrigTxt, !irrigation && s.irrigTxtOn]}>Sèche</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.irrigBtn, irrigation && s.irrigBtnOn]} onPress={() => setIrrigation(true)}>
+              <Text style={[s.irrigTxt, irrigation && s.irrigTxtOn]}>Irriguée</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* ── Section 3 : Données économiques ──────────────────────────────── */}
+      <View style={s.formCard}>
+        <View style={s.formSectionHead}>
+          <Text style={s.formSectionIcon}>💰</Text>
+          <Text style={s.formSectionTitle}>Données économiques</Text>
+          <Text style={s.formSectionOptional}>facultatif — améliore la précision</Text>
+        </View>
+
+        {/* Rendement habituel */}
+        <View style={s.field}>
+          <View style={s.fieldLabelRow}>
+            <Text style={s.fieldLabel}>Votre rendement habituel</Text>
+            <Text style={s.fieldHint}>{rendementHa > 0 ? `${rendementHa} t/ha` : 'IA estime'}</Text>
+          </View>
+          <View style={s.stepperRow}>
+            <TouchableOpacity style={s.stepBtn} onPress={() => setRendementHa(v => Math.max(0, Math.round((v - 0.5) * 10) / 10))}>
+              <Text style={s.stepBtnText}>−</Text>
+            </TouchableOpacity>
+            <View style={[s.stepperVal, rendementHa === 0 && s.stepperValAuto]}>
+              <Text style={[s.stepperValText, rendementHa === 0 && s.stepperValAutoTxt]}>
+                {rendementHa > 0 ? `${rendementHa} t/ha` : 'Auto IA'}
+              </Text>
+            </View>
+            <TouchableOpacity style={s.stepBtn} onPress={() => setRendementHa(v => Math.round((v + 0.5) * 10) / 10)}>
+              <Text style={s.stepBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={s.fieldSub}>Votre rendement moyen réel sur cette parcelle</Text>
+        </View>
+
+        {/* Prix de vente visé */}
+        <View style={s.field}>
+          <View style={s.fieldLabelRow}>
+            <Text style={s.fieldLabel}>Prix de vente visé</Text>
+            <Text style={s.fieldHint}>{prixVise > 0 ? `${prixVise} €/t` : 'Prix marché'}</Text>
+          </View>
+          <View style={s.stepperRow}>
+            <TouchableOpacity style={s.stepBtn} onPress={() => setPrixVise(v => Math.max(0, v - 10))}>
+              <Text style={s.stepBtnText}>−</Text>
+            </TouchableOpacity>
+            <View style={[s.stepperVal, prixVise === 0 && s.stepperValAuto]}>
+              <Text style={[s.stepperValText, prixVise === 0 && s.stepperValAutoTxt]}>
+                {prixVise > 0 ? `${prixVise} €/t` : 'Marché'}
+              </Text>
+            </View>
+            <TouchableOpacity style={s.stepBtn} onPress={() => setPrixVise(v => v + 10)}>
+              <Text style={s.stepBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={s.fieldSub}>Contrat fixe, prix coopérative ou objectif négoce</Text>
+        </View>
+
+        {/* Fermage */}
+        <View style={s.field}>
+          <View style={s.fieldLabelRow}>
+            <Text style={s.fieldLabel}>Loyer foncier (fermage)</Text>
+            <Text style={s.fieldHint}>{fermageHa > 0 ? `${fermageHa} €/ha · ${fermageHa * hectares} € total` : 'Non renseigné'}</Text>
+          </View>
+          <View style={s.stepperRow}>
+            <TouchableOpacity style={s.stepBtn} onPress={() => setFermageHa(v => Math.max(0, v - 10))}>
+              <Text style={s.stepBtnText}>−</Text>
+            </TouchableOpacity>
+            <View style={[s.stepperVal, fermageHa === 0 && s.stepperValAuto]}>
+              <Text style={[s.stepperValText, fermageHa === 0 && s.stepperValAutoTxt]}>
+                {fermageHa > 0 ? `${fermageHa} €/ha` : 'Propriétaire'}
+              </Text>
+            </View>
+            <TouchableOpacity style={s.stepBtn} onPress={() => setFermageHa(v => v + 10)}>
+              <Text style={s.stepBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={s.fieldSub}>Loyer annuel des terres exploitées</Text>
+        </View>
+
+        {/* Charges variables */}
+        <View style={s.field}>
+          <View style={s.fieldLabelRow}>
+            <Text style={s.fieldLabel}>Charges variables</Text>
+            <Text style={s.fieldHint}>{chargesVarHa > 0 ? `${chargesVarHa} €/ha` : 'IA estime'}</Text>
+          </View>
+          <View style={s.stepperRow}>
+            <TouchableOpacity style={s.stepBtn} onPress={() => setChargesVarHa(v => Math.max(0, v - 25))}>
+              <Text style={s.stepBtnText}>−</Text>
+            </TouchableOpacity>
+            <View style={[s.stepperVal, chargesVarHa === 0 && s.stepperValAuto]}>
+              <Text style={[s.stepperValText, chargesVarHa === 0 && s.stepperValAutoTxt]}>
+                {chargesVarHa > 0 ? `${chargesVarHa} €/ha` : 'Auto IA'}
+              </Text>
+            </View>
+            <TouchableOpacity style={s.stepBtn} onPress={() => setChargesVarHa(v => v + 25)}>
+              <Text style={s.stepBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={s.fieldSub}>Semences + engrais + phytosanitaires (€/ha)</Text>
+        </View>
+
+        {/* Mode de vente */}
+        <View style={s.field}>
+          <Text style={s.fieldLabel}>Mode de commercialisation</Text>
+          <PillSelect options={MODES_VENTE} value={modeVente} onChange={v => setModeVente(v as string)} />
+        </View>
+      </View>
+
+      {/* ── Résumé de simulation ──────────────────────────────────────────── */}
+      {(rendementHa > 0 || prixVise > 0 || fermageHa > 0 || chargesVarHa > 0) && (
+        <View style={s.simSummary}>
+          <Text style={s.simSummaryTitle}>Paramètres actifs pour la simulation</Text>
+          <View style={s.simSummaryGrid}>
+            {rendementHa > 0  && <View style={s.simChip}><Text style={s.simChipTxt}>{rendementHa} t/ha</Text></View>}
+            {prixVise > 0     && <View style={s.simChip}><Text style={s.simChipTxt}>{prixVise} €/t</Text></View>}
+            {fermageHa > 0    && <View style={s.simChip}><Text style={s.simChipTxt}>{fermageHa} €/ha fermage</Text></View>}
+            {chargesVarHa > 0 && <View style={s.simChip}><Text style={s.simChipTxt}>{chargesVarHa} €/ha charges</Text></View>}
+          </View>
+        </View>
+      )}
+
+      {/* ── Localisation + erreur + CTA ───────────────────────────────────── */}
+      <View style={[s.formCard, { marginTop: 0 }]}>
         {!!error && <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View>}
-
         <TouchableOpacity
           style={[s.ctaBtn, (loading || geocoding || !coords) && s.ctaBtnDisabled]}
           onPress={handleSimuler}
@@ -331,7 +579,7 @@ export default function RentabiliteScreen() {
         >
           {loading
             ? <ActivityIndicator color="#fff" />
-            : <Text style={s.ctaBtnText}>🌾 Lancer la simulation IA</Text>
+            : <Text style={s.ctaBtnText}>🌾 Lancer la simulation</Text>
           }
         </TouchableOpacity>
       </View>
@@ -346,7 +594,7 @@ export default function RentabiliteScreen() {
               width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
             }]} />
           </View>
-          <Text style={s.loadNote}>Données météo + IA Gemini · environ 10 secondes</Text>
+          <Text style={s.loadNote}>Météo · IA agronomique · environ 10 secondes</Text>
         </View>
       )}
 
@@ -402,20 +650,38 @@ const s = StyleSheet.create({
   headerDate:  { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 },
 
   formCard: {
-    marginHorizontal: 18, marginBottom: 16,
-    backgroundColor: Colors.white, borderRadius: 20, padding: 22, gap: 18,
+    marginHorizontal: 18, marginBottom: 12,
+    backgroundColor: Colors.white, borderRadius: 20, padding: 20, gap: 18,
     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12,
     shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
-  formTitle:  { fontSize: 16, fontWeight: '800', color: Colors.primaryDark },
-  field:      { gap: 10 },
-  fieldLabel: { fontSize: 13, fontWeight: '700', color: Colors.primaryDark },
+  formSectionHead:     { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: -4 },
+  formSectionIcon:     { fontSize: 18 },
+  formSectionTitle:    { fontSize: 16, fontWeight: '800', color: Colors.primaryDark, flex: 1 },
+  formSectionOptional: { fontSize: 10, color: Colors.textMuted, fontStyle: 'italic' },
 
-  stepperRow:     { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  stepBtn:        { width: 44, height: 44, borderRadius: 12, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
-  stepBtnText:    { fontSize: 22, fontWeight: '700', color: Colors.primary },
-  stepperVal:     { flex: 1, height: 44, backgroundColor: Colors.backgroundAlt, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  stepperValText: { fontSize: 18, fontWeight: '800', color: Colors.primaryDark },
+  field:      { gap: 8 },
+  fieldLabel: { fontSize: 13, fontWeight: '700', color: Colors.primaryDark },
+  fieldSub:   { fontSize: 11, color: Colors.textMuted, lineHeight: 15 },
+
+  stepperRow:        { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  stepBtn:           { width: 44, height: 44, borderRadius: 12, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  stepBtnText:       { fontSize: 22, fontWeight: '700', color: Colors.primary },
+  stepperVal:        { flex: 1, height: 44, backgroundColor: Colors.backgroundAlt, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  stepperValAuto:    { backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed' as any },
+  stepperValText:    { fontSize: 16, fontWeight: '800', color: Colors.primaryDark },
+  stepperValAutoTxt: { fontSize: 13, color: Colors.textMuted, fontWeight: '500', fontStyle: 'italic' },
+
+  // Mode production / Irrigation / Cultures
+  fieldLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  fieldHint:     { fontSize: 11, color: Colors.primary, fontWeight: '600' },
+  clearTxt:      { fontSize: 11, color: Colors.error, marginTop: 6, fontWeight: '600' },
+
+  irrigRow:    { flexDirection: 'row', gap: 10 },
+  irrigBtn:    { flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border, alignItems: 'center', backgroundColor: Colors.white },
+  irrigBtnOn:  { backgroundColor: Colors.headerBg, borderColor: Colors.headerBg },
+  irrigTxt:    { fontSize: 14, fontWeight: '600', color: Colors.textMuted },
+  irrigTxtOn:  { color: '#fff' },
 
   locRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.backgroundAlt, borderRadius: 10, padding: 12 },
   locIcon: { fontSize: 14 },
@@ -439,6 +705,13 @@ const s = StyleSheet.create({
   progressTrack: { height: 8, backgroundColor: Colors.primaryBg, borderRadius: 4, overflow: 'hidden' },
   progressFill:  { height: '100%', backgroundColor: Colors.primary, borderRadius: 4 },
   loadNote:      { fontSize: 11, color: Colors.textMuted },
+
+  // Résumé simulation
+  simSummary:     { marginHorizontal: 18, marginBottom: 12, backgroundColor: Colors.primaryBg, borderRadius: 14, padding: 14, gap: 8, borderWidth: 1, borderColor: Colors.primaryLight + '44' },
+  simSummaryTitle:{ fontSize: 11, fontWeight: '700', color: Colors.primary, letterSpacing: 1, textTransform: 'uppercase' },
+  simSummaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  simChip:        { backgroundColor: Colors.primary, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  simChipTxt:     { fontSize: 12, fontWeight: '700', color: '#fff' },
 
   results:     { paddingHorizontal: 18, gap: 12, marginBottom: 8 },
   resultsLabel:{ fontSize: 11, fontWeight: '700', color: Colors.primary, letterSpacing: 2, textTransform: 'uppercase' },

@@ -60,10 +60,39 @@ export interface RechercheRequest {
   region?:   string;
 }
 
+export interface PrixLiveItem {
+  culture:       string;
+  culture_key:   string;
+  ticker:        string;
+  marche:        string;
+  prix_eur:      number;
+  variation_pct: number | null;
+  tendance:      'hausse' | 'baisse' | 'stable';
+  historique:    number[];   // 30 dernières clôtures EUR/t
+}
+
+export interface PrixLiveResponse {
+  items:     PrixLiveItem[];
+  timestamp: string;
+}
+
 // ─── Appels API ───────────────────────────────────────────────────────────────
 
 export async function fetchMarcheAnalyse(req: MarcheRequest): Promise<MarcheAnalyse> {
   const res = await fetch(`${API_BASE_URL}/marche/analyse`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail ?? `Erreur serveur (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function fetchPrixLive(req: MarcheRequest): Promise<PrixLiveResponse> {
+  const res = await fetch(`${API_BASE_URL}/marche/prix-live`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify(req),

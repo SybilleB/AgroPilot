@@ -32,10 +32,22 @@ export interface ConseilAgricole {
 }
 
 export interface RequeteTop3 {
-  hectares:  number;
-  type_sol:  string;
-  latitude:  number;
-  longitude: number;
+  // Exploitation
+  hectares:             number;
+  type_sol:             string;
+  latitude:             number;
+  longitude:            number;
+  // Production
+  cultures_souhaitees?:      string[];
+  mode_production?:          string;          // conventionnel | raisonne | bio
+  irrigation?:               boolean;
+  // Données économiques réelles
+  rendement_habituel_t_ha?:  number;          // t/ha connu de l'agriculteur (0 = non renseigné)
+  prix_vente_vise_eur_t?:    number;          // €/t cible (0 = non renseigné)
+  fermage_eur_ha?:            number;          // loyer foncier €/ha/an
+  charges_variables_eur_ha?: number;          // phyto+engrais+semences €/ha (0 = non renseigné)
+  mode_vente?:               string;          // cooperative | negoce | circuit_court | contrat
+  prix_vente_custom?:        Record<string, number>;
 }
 
 export interface RequeteConseil extends RequeteTop3 {

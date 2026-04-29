@@ -217,7 +217,7 @@ function MeteoMap({ lat, lon }: { lat: number; lon: number; commune: string }) {
   if (Platform.OS === 'web') {
     return React.createElement('iframe', {
       src:   windyUrl,
-      style: { width: '100%', height: '100%', border: 'none' },
+      style: { width: '100%', height: 360, border: 'none', display: 'block' },
       title: 'Météo Windy',
       allow: 'fullscreen',
     });
@@ -615,13 +615,18 @@ export default function MeteoScreen() {
   const soilDeep  = hourly.soilTemp18cm[hi] ?? hourly.soilTemp18cm[0] ?? 0;
   const dec       = traitementOk(current.windSpeed, current.windGusts, current.precipitation);
 
+  const webCenter = Platform.OS === 'web' ? { maxWidth: 720, alignSelf: 'center' as const, width: '100%' } : {};
+
   return (
     <ScrollView
       style={s.screen}
-      contentContainerStyle={{ paddingBottom: 48 }}
+      contentContainerStyle={[{ paddingBottom: 48 }, Platform.OS === 'web' && { alignItems: 'center' as any }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={Colors.primary} />}
       showsVerticalScrollIndicator={false}
     >
+
+      {/* ─── WRAPPER WEB ─────────────────────────────────────────────────── */}
+      <View style={webCenter}>
 
       {/* ─── HEADER ──────────────────────────────────────────────────────── */}
       <View style={[s.header, { paddingTop: insets.top + 18 }]}>
@@ -816,6 +821,9 @@ export default function MeteoScreen() {
       </View>
 
       <Text style={s.footer}>Open-Meteo · RainViewer · Windy · ESRI · data.gouv.fr</Text>
+
+      {/* ─── FIN WRAPPER WEB ─────────────────────────────────────────────── */}
+      </View>
     </ScrollView>
   );
 }
@@ -873,7 +881,7 @@ const s = StyleSheet.create({
   frostAlertTxt:{ fontSize: 13, color: '#0D47A1', lineHeight: 18, flex: 1 },
 
   // Carte
-  mapContainer: { marginHorizontal: 16, marginBottom: 14, borderRadius: 16, overflow: 'hidden', height: 400, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
+  mapContainer: { marginHorizontal: 16, marginBottom: 14, borderRadius: 16, overflow: 'hidden', height: Platform.OS === 'web' ? 360 : 400, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
 
   // Section
   sectionPad:   { paddingHorizontal: 16, marginBottom: 14 },
@@ -913,7 +921,7 @@ const s = StyleSheet.create({
 
   // Grid cards
   grid:         { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 10, marginBottom: 14 },
-  card:         { width: '47.5%', backgroundColor: Colors.white, borderRadius: 14, padding: 14, gap: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  card:         { width: Platform.OS === 'web' ? '48%' : '47.5%', backgroundColor: Colors.white, borderRadius: 14, padding: 14, gap: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
   cardHead:     { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
   cardIcon:     { fontSize: 14 },
   cardTitle:    { fontSize: 11, color: Colors.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, flex: 1 },
