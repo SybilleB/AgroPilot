@@ -152,10 +152,9 @@ export default function DashboardScreen() {
 
       <NavCard
         icon="📈"
-        title="Simulation de rentabilité"
-        desc="Calculez votre marge nette par hectare avant de semer"
-        badge="Nouveau"
-        onPress={() => router.push('/(app)/rentabilite')}
+        title="Marchés & Rentabilité"
+        desc="Prix MATIF en temps réel + simulateur de marge par culture"
+        onPress={() => router.push('/(app)/marche')}
       />
 
       <NavCard
@@ -165,12 +164,27 @@ export default function DashboardScreen() {
         onPress={() => router.push('/(app)/meteo')}
       />
 
-      <NavCard
-        icon="💶"
-        title="Subventions disponibles"
-        desc="PAC, aides régionales et plan de relance — filtrées pour vous"
+      {/* ─── SECTION "SUBVENTIONS" (distincte) ─────────────────────────── */}
+      <Text style={[s.sectionLabel, { marginTop: 10 }]}>SUBVENTIONS & AIDES</Text>
+
+      <TouchableOpacity
+        style={s.subvCard}
         onPress={() => router.push('/(app)/subventions')}
-      />
+        activeOpacity={0.85}
+      >
+        <View style={s.subvLeft}>
+          <View style={s.subvIconBox}>
+            <Text style={s.subvIcon}>💶</Text>
+          </View>
+          <View style={s.subvText}>
+            <Text style={s.subvTitle}>Trouver mes subventions</Text>
+            <Text style={s.subvDesc}>
+              L'IA analyse votre profil et identifie toutes les aides auxquelles vous avez droit — PAC, aides régionales, certifications.
+            </Text>
+          </View>
+        </View>
+        <Text style={s.subvArrow}>›</Text>
+      </TouchableOpacity>
 
       {/* ─── BLOC "ANALYSE IA" ───────────────────────────────────────────── */}
       <View style={s.aiCard}>
@@ -286,6 +300,30 @@ const s = StyleSheet.create({
   arrowText:    { fontSize: 22, color: Colors.textMuted, fontWeight: '300' },
   badgePill:    { backgroundColor: Colors.primaryBg, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
   badgePillText:{ fontSize: 10, fontWeight: '700', color: Colors.primary },
+
+  // Carte subventions (distincte)
+  subvCard: {
+    marginHorizontal: 22,
+    marginBottom: 10,
+    backgroundColor: '#1A3A0F',
+    borderRadius: 16,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  subvLeft:    { flexDirection: 'row', alignItems: 'flex-start', gap: 14, flex: 1 },
+  subvIconBox: { width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  subvIcon:    { fontSize: 22 },
+  subvText:    { flex: 1, gap: 4 },
+  subvTitle:   { fontSize: 15, fontWeight: '800', color: '#fff' },
+  subvDesc:    { fontSize: 12, color: 'rgba(255,255,255,0.65)', lineHeight: 17 },
+  subvArrow:   { fontSize: 26, color: 'rgba(255,255,255,0.5)', fontWeight: '300', paddingLeft: 8 },
 
   // Bloc IA
   aiCard: {

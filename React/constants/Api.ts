@@ -1,5 +1,8 @@
-﻿function resolveApiUrl(): string {
-  return "http://10.111.1.56:8000"; // Remplace par l'IP de ton serveur local (carte rÃ©seau de ton PC sur le meme rÃ©seau que ton tÃ©lÃ©phone)
+function resolveApiUrl(): string {
+  // Utilise la variable d'environnement Expo si disponible.
+  // Pour tester sur téléphone physique, change EXPO_PUBLIC_API_URL dans React/.env
+  // avec l'IP locale de ton PC (ex: http://192.168.1.XX:8000)
+  return (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 }
 
 export const API_BASE_URL = resolveApiUrl();

@@ -195,6 +195,18 @@ function HourlySection({ temps, rains, times }: { temps: number[]; rains: number
 //  • Web (Expo web) → iframe Windy embed
 
 function MeteoMap({ lat, lon }: { lat: number; lon: number; commune: string }) {
+  // Garde contre les coordonnées invalides (NaN / 0 / null)
+  if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
+    return (
+      <View style={[mapStyles.webview, { alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.backgroundAlt }]}>
+        <Text style={{ fontSize: 24 }}>📍</Text>
+        <Text style={{ fontSize: 13, color: Colors.textMuted, marginTop: 8, textAlign: 'center' }}>
+          Localisation non disponible.{'\n'}Vérifiez votre commune dans le profil.
+        </Text>
+      </View>
+    );
+  }
+
   const windyUrl =
     `https://embed.windy.com/embed2.html` +
     `?lat=${lat}&lon=${lon}&zoom=9&level=surface&overlay=rain` +
@@ -286,15 +298,19 @@ function buildMapHtml(lat: number, lon: number, commune: string): string {
 <body>
 <div id="map"></div>
 <div id="layerBar">
-  <button class="lbtn active" id="btn-radar"  onclick="setMode('radar')">Radar</button>
-  <button class="lbtn"        id="btn-sat"    onclick="setMode('satellite')">Satellite</button>
-  <button class="lbtn"        id="btn-topo"   onclick="setMode('topo')">Terrain</button>
+  <button class="lbtn active" id="btn-radar" onclick="setMode('radar')">Radar</button>
+  <button class="lbtn"        id="btn-topo"  onclick="setMode('topo')">Terrain</button>
 </div>
 <div id="infoBadge">Radar précipitations<br><span style="color:#888;font-size:10px">Animé · temps réel</span></div>
 <div id="radarTime"></div>
 
 <script>
-const LAT="${lat}", LON="${lon}", NAME="${safeCommune}";
+const LAT=parseFloat("${lat}"), LON=parseFloat("${lon}"), NAME="${safeCommune}";
+
+if (isNaN(LAT) || isNaN(LON)) {
+  document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:12px;background:#f0f4f0;"><span style="font-size:48px">📍</span><p style="font-family:sans-serif;color:#666;text-align:center">Localisation non disponible</p></div>';
+  throw new Error("Coordonnées invalides");
+}
 
 const map = L.map('map',{center:[LAT,LON],zoom:9,zoomControl:true});
 
@@ -354,7 +370,6 @@ function stopRadar(){
 
 const infos={
   radar    :'Radar précipitations<br><span style="color:#888;font-size:10px">Animé · temps réel</span>',
-  satellite:'Imagerie satellite<br><span style="color:#888;font-size:10px">Visualisez vos parcelles</span>',
   topo     :'Relief & topographie<br><span style="color:#888;font-size:10px">Drainage · exposition</span>',
 };
 
@@ -364,8 +379,7 @@ function setMode(mode){
   document.getElementById('infoBadge').innerHTML=infos[mode];
 
   map.removeLayer(OSM);map.removeLayer(SAT);map.removeLayer(TOPO);
-  if(mode==='satellite')SAT.addTo(map);
-  else if(mode==='topo')TOPO.addTo(map);
+  if(mode==='topo')TOPO.addTo(map);
   else OSM.addTo(map);
 
   stopRadar();

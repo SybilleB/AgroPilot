@@ -10,14 +10,13 @@ echo.
 set SCRIPT_DIR=%~dp0
 set REACT_DIR=%SCRIPT_DIR%React
 set FASTAPI_DIR=%SCRIPT_DIR%FastAPI
-set API_FILE=%REACT_DIR%\constants\Api.ts
+set REACT_ENV=%REACT_DIR%\.env
 
 :: ─────────────────────────────────────────────────────────────
 :: 0. Detection de l'IP Locale (Wi-Fi)
 :: ─────────────────────────────────────────────────────────────
 echo [0/4] Recherche de votre adresse IP locale...
 
-:: On cherche l'IP 192.168.x.x ou 10.x.x.x
 for /f "tokens=2 delims=:" %%i in ('ipconfig ^| findstr /i "IPv4" ^| findstr "192.168. 10."') do (
     set RAW_IP=%%i
     set MY_IP=!RAW_IP: =!
@@ -32,40 +31,54 @@ if "%MY_IP%"=="" (
 echo  OK : Votre IP est %MY_IP%
 
 :: ─────────────────────────────────────────────────────────────
-:: 1. Mise a jour automatique de l'IP dans le Code
+:: 1. Mise a jour de l'URL API dans le .env React
 :: ─────────────────────────────────────────────────────────────
-echo [1/4] Configuration de l'API (AgroPilot-FRONTEND)...
+echo [1/4] Configuration de l'API dans React/.env...
 
-if exist "%API_FILE%" (
-    echo      Mise a jour de constants/Api.ts -> http://%MY_IP%:8000
-    :: Utilise PowerShell pour remplacer l'URL sans toucher au reste du fichier
-    powershell -Command "(gc '%API_FILE%') -replace 'http://[^:]+:8000', 'http://%MY_IP%:8000' | Out-File -encoding utf8 '%API_FILE%'"
+if exist "%REACT_ENV%" (
+    powershell -Command "(gc '%REACT_ENV%') -replace 'EXPO_PUBLIC_API_URL=.*', 'EXPO_PUBLIC_API_URL=http://%MY_IP%:8000' | Out-File -encoding utf8 '%REACT_ENV%'"
+    echo      OK : EXPO_PUBLIC_API_URL mis a jour -> http://%MY_IP%:8000
+) else (
+    echo      Fichier React/.env introuvable, creation...
+    echo # Supabase > "%REACT_ENV%"
+    echo EXPO_PUBLIC_SUPABASE_URL=https://aluviwrteldhoqcpzmwr.supabase.co/ >> "%REACT_ENV%"
+    echo EXPO_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_E120uPgfVeFkNjC-vDS45w_MUePJ91C >> "%REACT_ENV%"
+    echo. >> "%REACT_ENV%"
+    echo # Backend FastAPI >> "%REACT_ENV%"
+    echo EXPO_PUBLIC_API_URL=http://%MY_IP%:8000 >> "%REACT_ENV%"
 )
 
 :: ─────────────────────────────────────────────────────────────
-:: 2. Installation & Lancement
+:: 2. Installation des dependances
 :: ─────────────────────────────────────────────────────────────
-echo [2/4] Verification des dependances...
+echo [2/4] Installation des dependances...
 
-:: Installation silencieuse d'AsyncStorage pour le cache si manquant
+:: Frontend React — toujours sync pour installer les packages manquants
 cd /d "%REACT_DIR%"
-if not exist "node_modules" (
-    echo      Installation initiale de npm...
-    call npm install
-)
-call npx expo install @react-native-async-storage/async-storage
+echo      Synchronisation npm (packages manquants)...
+call npm install
 
-:: Backend
+:: Backend Python
 cd /d "%FASTAPI_DIR%"
-if not exist "venv" python -m venv venv
+if not exist "venv" (
+    echo      Creation du venv Python...
+    python -m venv venv
+)
 
+echo      Installation des packages Python (requirements.txt)...
+call venv\Scripts\activate && pip install -r requirements.txt --quiet
+echo      OK : packages Python installes
+
+:: ─────────────────────────────────────────────────────────────
+:: 3. Lancement des serveurs
+:: ─────────────────────────────────────────────────────────────
 echo [3/4] Lancement des serveurs...
 
-:: Lancer FastAPI (Host 0.0.0.0 est CRUCIAL pour etre vu par l'iPhone)
-start "AgroPilot-BACKEND" cmd /k "cd /d %FASTAPI_DIR% && venv\Scripts\activate && python -m uvicorn main:app --host 0.0.0.0 --port 8000"
+:: Lancer FastAPI (Host 0.0.0.0 est CRUCIAL pour etre vu sur le reseau local)
+start "AgroPilot-BACKEND" cmd /k "cd /d %FASTAPI_DIR% && venv\Scripts\activate && python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
 
-:: Lancer Expo en mode LAN (Reseau Local)
-start "AgroPilot-FRONTEND" cmd /k "cd /d %REACT_DIR% && npx expo start --lan --web"
+:: Lancer Expo en mode LAN avec --clear pour vider le cache Metro (fix logo)
+start "AgroPilot-FRONTEND" cmd /k "cd /d %REACT_DIR% && npx expo start --lan --clear"
 
 :: ─────────────────────────────────────────────────────────────
 :: 4. Resume
@@ -74,7 +87,8 @@ echo.
 echo  =======================================================
 echo   PRET POUR LA DEMO !
 echo   - Serveur API : http://%MY_IP%:8000
-echo   - Mode : LAN (iPhone et PC sur le MEME Wi-Fi)
+echo   - Docs API    : http://%MY_IP%:8000/docs
+echo   - Mode : LAN (telephone et PC sur le MEME Wi-Fi)
 echo  =======================================================
 echo.
 pause

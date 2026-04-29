@@ -1,7 +1,7 @@
 /**
  * app/(auth)/register.tsx — Écran d'inscription
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Image, KeyboardAvoidingView, Platform, ScrollView,
   StyleSheet, Text, TouchableOpacity, View,
@@ -58,6 +58,14 @@ export default function RegisterScreen() {
 
   // ── Écran de succès ───────────────────────────────────────────────────────
 
+  // Auto-redirect vers le setup d'exploitation après inscription
+  useEffect(() => {
+    if (success) {
+      const t = setTimeout(() => router.replace('/profile-setup'), 1800);
+      return () => clearTimeout(t);
+    }
+  }, [success]);
+
   if (success) {
     return (
       <View style={[s.successRoot, { paddingTop: insets.top }]}>
@@ -81,14 +89,11 @@ export default function RegisterScreen() {
             Vérifiez votre boîte mail pour confirmer votre adresse avant de vous connecter.
           </Text>
           <Text style={s.successSubtext}>
-            Prenez 2 minutes pour configurer votre exploitation — ça permettra à AgroPilot de vous proposer les bonnes aides et les bons calculs.
+            Configurer votre exploitation en cours…
           </Text>
-
           <TouchableOpacity style={s.successBtn} onPress={() => router.replace('/profile-setup')}>
-            <Text style={s.successBtnText}>Configurer mon exploitation</Text>
+            <Text style={s.successBtnText}>Configurer mon exploitation →</Text>
           </TouchableOpacity>
-
-          <Link href="/(auth)/login" style={s.successLink}>Plus tard, aller à la connexion</Link>
         </View>
       </View>
     );

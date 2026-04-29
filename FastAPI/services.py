@@ -1,14 +1,8 @@
 import httpx
 from datetime import date
-import os
 from dotenv import load_dotenv
-from supabase import create_client, Client
 
 load_dotenv()
-
-url = os.environ.get("EXPO_PUBLIC_SUPABASE_URL")
-key = os.environ.get("EXPO_PUBLIC_SUPABASE_ANON_KEY")
-supabase: Client = create_client(url, key)
 
 async def get_historique_meteo(lat: float, lon: float, date_debut: date, date_fin: date):
     """
