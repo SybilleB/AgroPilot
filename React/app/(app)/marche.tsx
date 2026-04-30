@@ -615,7 +615,7 @@ export default function MarcheScreen() {
                   width: progressM.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
                 }]} />
               </View>
-              <Text style={s.loadNote}>Tavily + Gemini analysent les marchés</Text>
+              <Text style={s.loadNote}>Tavily + Groq / IA analysent les marchés</Text>
             </View>
           )}
 
@@ -808,7 +808,7 @@ export default function MarcheScreen() {
                   width: progressS.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
                 }]} />
               </View>
-              <Text style={s.loadNote}>Météo + base cultures + IA Gemini · ~10s</Text>
+              <Text style={s.loadNote}>Météo + base cultures + Groq / IA · ~10s</Text>
             </View>
           )}
 

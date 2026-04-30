@@ -319,7 +319,7 @@ export default function RentabiliteScreen() {
     } finally {
       setLoading(false);
     }
-  }, [coords, hectares, typeSol]);
+  }, [coords, hectares, typeSol, culturesChoisies, modeProd, irrigation, rendementHa, prixVise, fermageHa, chargesVarHa, modeVente]);
 
   const handleSelectCulture = useCallback(async (idx: number, culture: RecommandationCulture) => {
     if (selectedIdx === idx) { setSelectedIdx(null); setConseil(null); return; }
@@ -343,7 +343,7 @@ export default function RentabiliteScreen() {
       });
       setConseil(res);
     } catch { /* silence */ } finally { setConseilLoading(false); }
-  }, [selectedIdx, coords, hectares, typeSol]);
+  }, [selectedIdx, coords, hectares, typeSol, modeProd, irrigation, rendementHa, prixVise, fermageHa, chargesVarHa, modeVente]);
 
   const commune = fullProfile?.exploitation?.commune ?? '';
 

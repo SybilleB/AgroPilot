@@ -70,6 +70,28 @@ call venv\Scripts\activate && pip install -r requirements.txt --quiet
 echo      OK : packages Python installes
 
 :: ─────────────────────────────────────────────────────────────
+:: 2b. Verification du .env FastAPI (cles API)
+:: ─────────────────────────────────────────────────────────────
+set FASTAPI_ENV=%FASTAPI_DIR%\.env
+if not exist "%FASTAPI_ENV%" (
+    echo.
+    echo  [ATTENTION] FastAPI\.env introuvable !
+    echo  Creez le fichier FastAPI\.env avec ces cles :
+    echo    GROQ_API_KEY=...      (console.groq.com -- gratuit)
+    echo    TAVILY_API_KEY=...    (app.tavily.com -- gratuit)
+    echo    GOOGLE_API_KEY=...    (aistudio.google.com -- fallback optionnel)
+    echo.
+    pause
+) else (
+    findstr /i "GROQ_API_KEY" "%FASTAPI_ENV%" >nul 2>&1
+    if errorlevel 1 (
+        echo  [ATTENTION] GROQ_API_KEY absent de FastAPI\.env !
+    ) else (
+        echo  OK : FastAPI\.env present
+    )
+)
+
+:: ─────────────────────────────────────────────────────────────
 :: 3. Lancement des serveurs
 :: ─────────────────────────────────────────────────────────────
 echo [3/4] Lancement des serveurs...

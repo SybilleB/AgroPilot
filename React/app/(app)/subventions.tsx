@@ -44,7 +44,7 @@ function SubventionCardView({ card }: { card: SubventionCard }) {
             {[1, 2, 3, 4, 5].map(i => (
               <View
                 key={i}
-                style={[s.scoreDot, i <= card.score && s.scoreDotActive]}
+                style={[s.scoreDot, i <= Math.round(card.score / 2) && s.scoreDotActive]}
               />
             ))}
           </View>
@@ -215,7 +215,7 @@ export default function SubventionsScreen() {
             <Text style={s.aiLabel}>ANALYSE IA</Text>
             <Text style={s.aiTitle}>Trouvez vos aides en 30 secondes</Text>
             <Text style={s.aiBody}>
-              Tavily recherche les aides 2024-2025 en temps réel. Gemini 3.1 Flash Lite identifie vos éligibilités.
+              Tavily recherche les aides 2024-2025 en temps réel. Groq / IA identifie vos éligibilités.
             </Text>
           </View>
           <TouchableOpacity
@@ -261,7 +261,7 @@ export default function SubventionsScreen() {
           </View>
 
           <Text style={s.loadingNote}>
-            Gemini analyse vos données en temps réel — cela prend environ 10 secondes
+            L'IA analyse vos données en temps réel — cela prend environ 10 secondes
           </Text>
         </View>
       )}

@@ -114,6 +114,30 @@ echo -e "${GREEN}✓ Backend installé${NC}"
 echo ""
 
 # ─────────────────────────────────────────────────────────────
+# 3b. Vérification du .env FastAPI (clés API)
+# ─────────────────────────────────────────────────────────────
+FASTAPI_ENV="$FASTAPI_DIR/.env"
+if [ ! -f "$FASTAPI_ENV" ]; then
+  echo -e "${RED}⚠  FastAPI/.env introuvable !${NC}"
+  echo -e "${YELLOW}    Créez le fichier FastAPI/.env avec ces clés :${NC}"
+  echo "      GROQ_API_KEY=...      (console.groq.com — gratuit)"
+  echo "      TAVILY_API_KEY=...    (app.tavily.com — gratuit)"
+  echo "      GOOGLE_API_KEY=...    (aistudio.google.com — fallback optionnel)"
+  echo ""
+  read -p "    Appuyez sur Entrée pour continuer quand même... " _
+else
+  MISSING=""
+  grep -q "GROQ_API_KEY"   "$FASTAPI_ENV" || MISSING="$MISSING GROQ_API_KEY"
+  grep -q "TAVILY_API_KEY" "$FASTAPI_ENV" || MISSING="$MISSING TAVILY_API_KEY"
+  if [ -n "$MISSING" ]; then
+    echo -e "${YELLOW}⚠  Clés manquantes dans FastAPI/.env :$MISSING${NC}"
+  else
+    echo -e "${GREEN}✓ FastAPI/.env présent et complet${NC}"
+  fi
+fi
+echo ""
+
+# ─────────────────────────────────────────────────────────────
 # 4. Lancement des serveurs
 # ─────────────────────────────────────────────────────────────
 echo -e "${YELLOW}[4/4] Lancement des serveurs...${NC}"

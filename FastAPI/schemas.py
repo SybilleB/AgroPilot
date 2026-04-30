@@ -40,6 +40,10 @@ class RequeteIA(BaseModel):
     latitude: float
     longitude: float
 
+class RequeteConseil(RequeteTop3):
+    """Requête conseil culture — étend RequeteTop3 avec la culture ciblée."""
+    culture: str
+
 class ConseilAgricole(BaseModel):
     rendement_total_tonnes: float = Field(description="Le rendement total estimé en tonnes")
     chiffre_affaires_euros: float = Field(description="Le CA total estimé")

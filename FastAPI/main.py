@@ -139,11 +139,11 @@ _BUSHEL_TO_TONNE = {
 }
 
 _COMMODITIES = [
-    {"name": "Ble tendre", "ticker": "ZW=F",  "marche": "CBOT"},
-    {"name": "Mais",       "ticker": "ZC=F",  "marche": "CBOT"},
-    {"name": "Soja",       "ticker": "ZS=F",  "marche": "CBOT"},
-    {"name": "Colza",      "ticker": "ECO=F", "marche": "MATIF"},
-    {"name": "Petrole",    "ticker": "BZ=F",  "marche": "ICE", "unit": "USDbaril"},
+    {"name": "Ble tendre", "ticker": "ZW=F",  "marche": "CBOT", "unit": "USDbushel_cents", "conv": 36.744},
+    {"name": "Mais",       "ticker": "ZC=F",  "marche": "CBOT", "unit": "USDbushel_cents", "conv": 39.368},
+    {"name": "Soja",       "ticker": "ZS=F",  "marche": "CBOT", "unit": "USDbushel_cents", "conv": 36.744},
+    {"name": "Colza",      "ticker": "RS=F",  "marche": "ICE",  "unit": "CADtonne",        "conv": 1.0},
+    {"name": "Petrole",    "ticker": "BZ=F",  "marche": "ICE",  "unit": "USDbaril",        "conv": 1.0},
 ]
 
 # Mapping culture clé → ticker Yahoo Finance pour l'affichage temps réel
@@ -288,41 +288,55 @@ async def fetch_prix_live_async(cultures: List[str]) -> List[dict]:
 
 
 def _sync_fetch_prices() -> List[dict]:
+    """Récupère les prix via yfinance.history() (méthode stable, même logique que _sync_fetch_prix_live)."""
     try:
         import yfinance as yf
     except ImportError:
         print("yfinance non installe")
         return []
 
+    # ── Taux de change ──────────────────────────────────────────────────────────
     try:
-        eurusd = yf.Ticker("EURUSD=X").fast_info.get("last_price") or 1.08
-        if not eurusd or eurusd <= 0:
-            eurusd = 1.08
+        eurusd_price, _, _ = _get_price_and_history("EURUSD=X")
+        eurusd = eurusd_price if eurusd_price and eurusd_price > 0 else 1.08
     except Exception:
         eurusd = 1.08
+
+    try:
+        cadusd_price, _, _ = _get_price_and_history("CADUSD=X")
+        cadusd = cadusd_price if cadusd_price and cadusd_price > 0 else 0.73
+    except Exception:
+        cadusd = 0.73
 
     results = []
     for c in _COMMODITIES:
         try:
-            fi    = yf.Ticker(c["ticker"]).fast_info
-            price = fi.get("last_price") or fi.get("regularMarketPrice")
-            prev  = fi.get("previous_close") or fi.get("regularMarketPreviousClose")
-            if not price:
+            price_raw, prev_raw, _ = _get_price_and_history(c["ticker"])
+            if not price_raw:
+                print("fetch_prices {}: pas de donnees history".format(c["ticker"]))
                 continue
 
-            unit = c.get("unit", "USDbushel")
-            if unit == "USDbushel":
-                conv      = _BUSHEL_TO_TONNE.get(c["ticker"], 36.744)
-                price_eur = round((price * conv) / eurusd, 1)
-                prev_eur  = round((prev * conv) / eurusd, 1) if prev else None
+            unit = c.get("unit", "USDbushel_cents")
+            conv = c.get("conv", 36.744)
+
+            if unit == "USDbushel_cents":
+                # CBOT grains : yfinance retourne des cents/bushel → ÷100 × bu/t ÷ eurusd
+                factor    = conv / 100.0
+                price_eur = round((price_raw * factor) / eurusd, 1)
+                prev_eur  = round((prev_raw  * factor) / eurusd, 1) if prev_raw else None
+                label     = str(price_eur) + " EUR/t"
+            elif unit == "CADtonne":
+                # ICE Canola (RS=F) : CAD/t → EUR/t
+                price_eur = round((price_raw * cadusd) / eurusd, 1)
+                prev_eur  = round((prev_raw  * cadusd) / eurusd, 1) if prev_raw else None
                 label     = str(price_eur) + " EUR/t"
             elif unit == "USDbaril":
-                price_eur = round(price / eurusd, 2)
-                prev_eur  = round(prev / eurusd, 2) if prev else None
+                price_eur = round(price_raw / eurusd, 2)
+                prev_eur  = round(prev_raw  / eurusd, 2) if prev_raw else None
                 label     = str(price_eur) + " EUR/baril"
             else:
-                price_eur = round(price, 1)
-                prev_eur  = round(prev, 1) if prev else None
+                price_eur = round(price_raw, 1)
+                prev_eur  = round(prev_raw,  1) if prev_raw else None
                 label     = str(price_eur) + " EUR/t"
 
             if prev_eur and prev_eur > 0:
@@ -333,6 +347,7 @@ def _sync_fetch_prices() -> List[dict]:
                 tendance  = "stable"
                 variation = None
 
+            print("fetch_prices {}: {}€".format(c["ticker"], price_eur))
             results.append({
                 "name":       c["name"],
                 "marche":     c["marche"],
@@ -342,7 +357,7 @@ def _sync_fetch_prices() -> List[dict]:
                 "variation":  variation,
             })
         except Exception as e:
-            print("yfinance {}: {}".format(c["ticker"], e))
+            print("fetch_prices {}: {}".format(c["ticker"], e))
             continue
 
     return results
@@ -703,7 +718,7 @@ async def get_marche_analyse(req: MarcheRequest):
     actualites = []
     for item in data.get("actualites", []):
         try:
-            actualites.append(ActualiteMarche(**item))
+            actualites.append(Actualite(**item))
         except Exception:
             pass
 
@@ -895,7 +910,7 @@ async def get_recommandations(payload: RequeteTop3):
 
 
 @app.post("/api/ia/generer-conseil", response_model=ConseilAgricole)
-async def generer_conseil(payload: RequeteIA):
+async def generer_conseil(payload: RequeteConseil):
     sol     = payload.type_sol or "limoneux"
     hec     = payload.hectares
     culture = CULTURE_LABELS.get(payload.culture or "", payload.culture or "culture")
@@ -913,15 +928,15 @@ async def generer_conseil(payload: RequeteIA):
     except Exception as e:
         print("Meteo erreur conseil:", e)
 
-    # Paramètres enrichis
-    mode_prod       = getattr(payload, "mode_production", None) or "conventionnel"
-    irrigation      = getattr(payload, "irrigation", None) or False
-    rendement_ha    = getattr(payload, "rendement_habituel_t_ha", None)
-    prix_vise       = getattr(payload, "prix_vente_vise_eur_t", None)
-    fermage         = getattr(payload, "fermage_eur_ha", None) or 0
-    charges_var     = getattr(payload, "charges_variables_eur_ha", None)
-    mode_vente      = getattr(payload, "mode_vente", None) or "negoce"
-    prix_custom     = getattr(payload, "prix_vente_custom", None) or {}
+    # Paramètres enrichis (directement disponibles via RequeteConseil → RequeteTop3)
+    mode_prod       = payload.mode_production or "conventionnel"
+    irrigation      = payload.irrigation or False
+    rendement_ha    = payload.rendement_habituel_t_ha
+    prix_vise       = payload.prix_vente_vise_eur_t
+    fermage         = payload.fermage_eur_ha or 0
+    charges_var     = payload.charges_variables_eur_ha
+    mode_vente      = payload.mode_vente or "negoce"
+    prix_custom     = payload.prix_vente_custom or {}
 
     # Prix spécifique à cette culture
     prix_culture = prix_custom.get(payload.culture) or prix_vise
